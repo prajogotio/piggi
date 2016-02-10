@@ -1,0 +1,82 @@
+<html>
+<head>
+	<script src="Vec2.js"></script>
+	<script src="ds.js"></script>
+	<script src="flocking.js"></script>
+	<script src="qpath.js"></script>
+</head>
+<body>
+	<canvas id="canvas" width="1024" height="640"></canvas>
+
+	<script>
+	var canvas = document.getElementById("canvas");
+	var g = canvas.getContext("2d");
+	var center = new Vec2(canvas.width/2, canvas.height/2);
+	
+	var map = {
+		width : 31, 
+		height : 18,
+	}
+	map.data = new Int32Array(map.width*map.height).fill(1);
+	var size = 32;
+	function test(start, end){
+		g.clearRect(0,0,canvas.width,canvas.height);
+		g.strokeStyle="black";
+		g.fillStyle="rgb(100,100,100)";
+		for(var i = 0; i < map.height; ++i){
+			for(var j = 0; j < map.width; ++j){
+				if (map[i*map.width+j]==0) {
+					g.fillRect(j*size,i*size,size,size);
+				}
+			}
+		}
+		var now = Date.now();
+		var path = findPath(start, end, map);
+		var cur = Date.now();
+		console.log(cur-now);
+		g.fillStyle="rgb(200,255,200)";
+		if (path.length > 0) {
+			for (var i = 0; i < path.length;++i){
+				g.fillRect(path[i][1]*size,path[i][0]*size,size,size);
+			}
+		}
+		g.fillStyle="red";
+		g.fillRect(start[1]*size,start[0]*size,size,size);
+		g.fillStyle="orange";
+		g.fillRect(end[1]*size,end[0]*size,size,size);
+		for(var i = 0; i < map.height; ++i){
+			for(var j = 0; j < map.width; ++j){
+				g.strokeRect(j*size,i*size,size,size);
+			}
+		}
+	}
+	var start = [0,0];
+	var end = [0,0];
+	var state = 'BLOCK';
+	test(start, end);
+	canvas.addEventListener("mousedown", function(e) {
+		var x = e.offsetX;
+		var y = e.offsetY;
+		var i = Math.floor(y/size);
+		var j = Math.floor(x/size);
+		if (state == 'START') {
+			start = [i, j];
+		} else if (state == 'END') {
+			end = [i, j];
+		} else if (state == 'BLOCK'){
+			map[i*map.width+j] = 0;
+		}
+		test(start, end);
+	});
+	document.addEventListener('keydown', function(e) {
+		if (e.which == 65) {
+			state = 'START';
+		} else if (e.which == 66) {
+			state = 'END';
+		} else if (e.which == 67) {
+			state = 'BLOCK';
+		}
+	})
+	</script>
+</body>
+</html>
