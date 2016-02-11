@@ -16,7 +16,7 @@ function Flocker(mass, pos, radius) {
 }
 
 Flocker.prototype.seek = function() {
-	var steeringEffect = 1.2;
+	var steeringEffect = 1.0;
 	if (this.target == null) return;
 	var targetVelocity = upperbound(this.target.minus(this.pos), this.MAXIMUM_SPEED);
 	var force = targetVelocity.minus(this.velocity).times(steeringEffect);
@@ -36,9 +36,8 @@ Flocker.prototype.integrate = function() {
 		this.orientation = getAngle(this.velocity);
 	}
 	if (this.target == null) {
-		this.velocity = this.velocity.times(0.8);
-	} else if (this.target.minus(this.pos).length() < this.TARGET_RADIUS) {
 		this.velocity = this.velocity.times(0.9);
+	} else if (this.target.minus(this.pos).length() < this.TARGET_RADIUS) {
 		this.target = this.targetStack.pop();
 	}
 	this.force.x = this.force.y = 0;
@@ -169,15 +168,31 @@ function updateFlocking(flock, map) {
 	if (map) {
 		for(var i = 0; i < flock.length; ++i){
 			var mpos = [Math.floor(flock[i].pos.y/map.size) ,Math.floor(flock[i].pos.x/map.size)];
-			var idx = mpos[0]*map.width+mpos[1];
-			if (idx > 0 && idx < map.data.length) {
-				if (map[idx]==0) {
-					var dij = flock[i].pos.minus(new Vec2((mpos[1]+0.5)*map.size, (mpos[0]+0.5)*map.size));
-					var penetration = flock[i].radius + map.size/2 - dij.length();
-					dij.normalize();
-					flock[i].pos = flock[i].pos.plus(dij.times(penetration*0.1));
+			for(var dr = -1; dr <= 1; ++dr) {
+				for(var dc = -1; dc <= 1; ++dc) {
+					resolveCollisionWithMap(flock[i], map, [mpos[0]+dr, mpos[1]+dc]);
 				}
 			}
+		}
+	}
+}
+
+function resolveCollisionWithMap(flock, map, mpos) {
+	if (mpos[0]<0 || mpos[1]<0 || mpos[0]>=map.height || mpos[1]>=map.width) return;
+	if (mpos[1]*size > flock.pos.x+flock.radius || (mpos[1]+1)*size < flock.pos.x-flock.radius ||
+		mpos[0]*size > flock.pos.y+flock.radius || (mpos[0]+1)*size < flock.pos.y-flock.radius) return;
+	var idx = mpos[0]*map.width+mpos[1];
+	if (idx > 0 && idx < map.data.length) {
+		if (map[idx]==0) {
+			var dij = flock.pos.minus(new Vec2((mpos[1]+0.5)*map.size, (mpos[0]+0.5)*map.size));
+			var penetration = map.size-Math.abs(dij.x);
+			var axis = new Vec2(Math.sign(dij.x),0);
+			if (Math.abs(dij.y) > Math.abs(dij.x)) {
+				penetration = map.size-Math.abs(dij.y);
+				axis.x = 0;
+				axis.y = Math.sign(dij.y);
+			}
+			flock.pos = flock.pos.plus(axis.times(penetration*0.1));
 		}
 	}
 }
