@@ -30,7 +30,7 @@ function findPath(start, target, map) {
 		pq.push({cost:dist+1+curcost, par:row*map.width+col, dist:dist+1, pos:[currow, curcol]});
 	}
 	var loc = -1;
-
+	var distToTarget = 1e9;
 	while (pq.size > 0) {
 		var cur = pq.top();
 		pq.pop();
@@ -43,6 +43,11 @@ function findPath(start, target, map) {
 		}
 		mark[idx] = 1;
 		par[idx] = cur.par;
+		var curDistToTarget = Math.abs(target[0]-row)+Math.abs(target[1]-col);
+		if (distToTarget > curDistToTarget) {
+			distToTarget = curDistToTarget;
+			loc = idx;
+		}
 		if (row==target[0] && col==target[1]) {
 			loc = idx;
 			break;

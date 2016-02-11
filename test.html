@@ -14,11 +14,11 @@
 	var center = new Vec2(canvas.width/2, canvas.height/2);
 	
 	var map = {
-		width : 31, 
-		height : 18,
+		width : 44, 
+		height : 22,
 	}
 	map.data = new Int32Array(map.width*map.height).fill(1);
-	var size = 32;
+	var size = 20;
 	function test(start, end){
 		g.clearRect(0,0,canvas.width,canvas.height);
 		g.strokeStyle="black";
@@ -54,7 +54,27 @@
 	var end = [0,0];
 	var state = 'BLOCK';
 	test(start, end);
+	var isdown = false;
 	canvas.addEventListener("mousedown", function(e) {
+		var x = e.offsetX;
+		var y = e.offsetY;
+		var i = Math.floor(y/size);
+		var j = Math.floor(x/size);
+		isdown = true;
+		if (state == 'START') {
+			start = [i, j];
+		} else if (state == 'END') {
+			end = [i, j];
+		} else if (state == 'BLOCK'){
+			map[i*map.width+j] = 0;
+		}
+		test(start, end);
+	});
+	canvas.addEventListener("mouseup",function(e) {
+		isdown = false;
+	})
+	canvas.addEventListener("mousemove", function(e) {
+		if(!isdown) return;
 		var x = e.offsetX;
 		var y = e.offsetY;
 		var i = Math.floor(y/size);

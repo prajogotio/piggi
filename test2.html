@@ -1,0 +1,69 @@
+<html>
+<head>
+	<script src="Vec2.js"></script>
+	<script src="ds.js"></script>
+	<script src="qpath.js"></script>
+	<script src="Sprite.js"></script>
+	<script src="flocking.js"></script>
+</head>
+<body>
+	<canvas id="canvas" width="1024" height="640"></canvas>
+
+	<script>
+	var canvas = document.getElementById("canvas");
+	var g = canvas.getContext("2d");
+	var center = new Vec2(canvas.width/2, canvas.height/2);
+	var imgBuffer = document.createElement("canvas");
+	imgBuffer.width = 1024;
+	imgBuffer.height = 640;
+	var pigmoving = new Image();
+	pigmoving.onload = function() {
+		imgBuffer.getContext('2d').drawImage(pigmoving,0,0,768,128,0,0,768,128);
+		startTest();
+	}
+	pigmoving.src = "asset/pig_running.png";
+	
+
+	function generatePig(pos) {
+		var f = new FlockPrite(100, pos);
+		f.setSprite(f.MOVING, new Sprite(imgBuffer, 0, 0, 128, 128, 6, 12));
+		return f;
+	}
+
+	function startTest() {
+		var f = [
+			generatePig(center),
+			generatePig(center),
+			generatePig(center),
+			generatePig(center),
+			generatePig(center),
+			generatePig(center),
+			generatePig(center),
+			generatePig(center),
+			];
+		var t = new Vec2(0, 0);
+		canvas.addEventListener("mousedown", function(e) {
+			var x = e.offsetX;
+			var y = e.offsetY;
+			t.x = x;
+			t.y = y;
+			for(var i=0;i<f.length;++i){
+				f[i].target = t;
+			}
+		});
+		setInterval(function(){
+			g.clearRect(0, 0, canvas.width, canvas.height);
+			g.fillStyle="red";
+			g.fillRect(t.x-1,t.y-1,2,2);
+
+			updateFlocking(f);
+			
+			for(var i=0;i<f.length;++i){
+				f[i].render(g);
+			}
+
+		}, 1000/60);
+	}
+	</script>
+</body>
+</html>
