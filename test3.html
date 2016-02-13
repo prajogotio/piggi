@@ -5,18 +5,33 @@
 	<script src="qpath.js"></script>
 	<script src="Sprite.js"></script>
 	<script src="flocking.js"></script>
+	<script src="dep.js"></script>
 </head>
 <body>
-	<canvas id="canvas" width="1024" height="640"></canvas>
+	<canvas id="canvas" width="1152" height="640"></canvas>
 
 	<script>
 	var canvas = document.getElementById("canvas");
 	var g = canvas.getContext("2d");
 	var center = new Vec2(canvas.width/2, canvas.height/2);
 	
-	var asset = ["asset/pig_running.png", "asset/pig_standby.png", "asset/grass01.jpg"];
+	var asset = ["asset/pig_running.png", 
+		"asset/pig_standby.png", 
+		"asset/pig_angry.png", 
+		"asset/pig_eating.png",
+		"asset/pig_death.png",
+		"asset/tower.png", 
+		"asset/tower_death.png",
+		"asset/rice_field.png", 
+		"asset/pig_ranch.png",
+		"asset/pig_ranch_death.png",
+		"asset/block.png", 
+		"asset/fence.png",
+		"asset/arrow.png",
+		"asset/grass01.jpg", ];
 	var images = {};
 	var loadedAssetCount = 0;
+	var buildings = [];
 
 	function loadAsset(url) {
 		var img = new Image();
@@ -39,7 +54,54 @@
 		var f = new FlockPrite(100, pos);
 		f.setSprite(f.STANDBY, new Sprite(images["asset/pig_standby.png"], 0, 0, 128, 128, 4, 20));
 		f.setSprite(f.MOVING, new Sprite(images["asset/pig_running.png"], 0, 0, 128, 128, 6, 12));
+		f.setSprite(f.ATTACKING, new Sprite(images["asset/pig_angry.png"], 0, 0, 128, 128, 3, 20));
+		f.setSprite(f.EATING, new Sprite(images["asset/pig_eating.png"], 0, 0, 128, 128, 2, 30));
+		f.setSprite(f.DEAD, new Sprite(images["asset/pig_death.png"], 0, 0, 128, 128, 1, 100));
+		f.sprites[f.ATTACKING].autoReset = false;
 		return f;
+	}
+
+	function generateTower() {
+		var t = new Building(128, 400);
+		t.setSprite(t.NORMAL, new Sprite(images["asset/tower.png"], 0, 0, 128, 128, 2, 25));
+		t.setSprite(t.DEAD, new Sprite(images["asset/tower_death.png"], 0, 0, 128, 128, 1, 100));
+		t.team = 1;
+		t.type = t.ATTACK_TYPE;
+		return t;
+	}
+
+	function generateBlock() {
+		var t = new Building(64, 0);
+		t.setSprite(t.NORMAL, new Sprite(images["asset/block.png"], 0, 0, 128, 128, 1, 1000));
+		t.HAS_HEALTHPOINT = false;
+		return t;
+	}
+
+	function generateFarm() {
+		var t = new Building(64, 400);
+		t.setSprite(t.NORMAL, new Sprite(images["asset/rice_field.png"], 0, 0, 128, 128, 6, 200));
+		t.team = 1;
+		t.interactionType = t.EAT_TYPE;
+		t.HAS_HEALTHPOINT = false;
+		return t;
+	}
+
+	function generatePigRanch() {
+		var t = new Building(128, 400);
+		t.setSprite(t.NORMAL, new Sprite(images["asset/pig_ranch.png"], 0, 0, 128, 128, 2, 100));
+		t.team = 1;
+		t.type = t.ATTACK_TYPE;
+		return t;
+	}
+
+	function generateFence() {
+		var t = new Building(64, 400);
+		t.setSprite(t.NORMAL, new Sprite(images["asset/fence.png"], 0, 0, 128, 128, 1, 100));
+		t.team = 1;
+		t.type = t.ATTACK_TYPE;
+		t.activity = t.PASSIVE;
+		t.HAS_HEALTHPOINT = false;
+		return t;
 	}
 
 	var map = {
@@ -48,6 +110,7 @@
 		size : 64,
 	}
 	map.data = new Int32Array(map.width*map.height).fill(1);
+	map.entry = new Array(map.width*map.height).fill(null);
 	var path = [];
 	var size = map.size;
 	var start = [0,0];
@@ -71,7 +134,37 @@
 			];
 		
 		setInterval(function(){
-			updateFlocking(f, map);
+			var now = Date.now();
+			//updateFlocking(f, map);
+			for (var i = 0; i < f.length; ++i) {
+				f[i].update(f, map);
+			}
+
+			// for (var i = 0; i < f.length; ++i) {
+			// 	if (f[i].lockOnTarget) {
+			// 		var dij = f[i].lockOnTarget.pos.minus(f[i].pos).length();
+			// 		if (dij <  f[i].radius + f[i].lockOnTarget.radius + f[i].attackRadius) {
+			// 			f[i].state = f[i].ATTACKING;
+			// 		} 
+			// 	} 
+			// 	for (var j = 0; j < buildings.length; ++j) {
+			// 		var dij = buildings[j].pos.minus(f[i].pos).length();
+			// 		if (dij < buildings[j].interactionDistance) {
+			// 			if (f[i].lockOnTarget != null && f[i].target != null) break;
+			// 			// f[i].lockOnTarget = buildings[j];
+			// 			// var p = findPath(
+			// 			// 	[Math.floor(f[i].pos.y/map.size), Math.floor(f[i].pos.x/map.size)],
+			// 			// 	[buildings[j].row, buildings[j].col],
+			// 			// 	map);
+			// 			// var cp = transformPathToVec2D(p, map);
+			// 			// cp[0] = buildings[j].pos;
+			// 			// f[i].setPath(cp);
+			// 			f[i].setLockOnTarget(buildings[j], map);
+			// 			break;
+			// 		}
+			// 	}
+			// }
+
 
 			g.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -88,14 +181,14 @@
 			g.save();
 			g.translate(-camera[0], -camera[1]);
 
-			g.fillStyle="rgb(100,100,100)";
-			for(var i = 0; i < map.height; ++i){
-				for(var j = 0; j < map.width; ++j){
-					if (map[i*map.width+j]==0) {
-						g.fillRect(j*size,i*size,size,size);
-					}
-				}
-			}
+			// g.fillStyle="rgb(100,100,100)";
+			// for(var i = 0; i < map.height; ++i){
+			// 	for(var j = 0; j < map.width; ++j){
+			// 		if (map[i*map.width+j]==0) {
+			// 			g.fillRect(j*size,i*size,size,size);
+			// 		}
+			// 	}
+			// }
 			
 			g.fillStyle="rgb(200,255,200)";
 			if (path.length > 0) {
@@ -110,6 +203,10 @@
 			g.fillRect(end[1]*size,end[0]*size,size,size);
 
 
+			for(var i = 0; i < buildings.length; ++i) {
+				buildings[i].render(g);
+			}
+
 			for(var i=0;i<f.length;++i){
 				f[i].render(g);
 				if (f[i].target) {
@@ -117,6 +214,7 @@
 					g.fillRect(f[i].target.x, f[i].target.y, 10, 10);
 				}
 			}
+
 			
 			for(var i = 0; i < map.height; ++i){
 				for(var j = 0; j < map.width; ++j){
@@ -124,9 +222,8 @@
 				}
 			}
 			g.restore();
-			
-			
 
+			var later = Date.now();
 		}, 1000/60);
 	}
 	canvas.addEventListener("mousedown", function(e) {
@@ -140,10 +237,33 @@
 		} else if (state == 'END') {
 			end = [i, j];
 		} else if (state == 'BLOCK'){
-			map[i*map.width+j] = 0;
+			var b = generateBlock();
+			registerBuildingToMap(b, map, i, j);
+			buildings.push(b);
 		} else if (state == 'CAMERA') {
 			pivot = [e.offsetX, e.offsetY];
 			oldcamera = camera.slice();
+		} else if (state == 'TOWER') {
+			var b = generateTower();
+			registerBuildingToMap(b, map, i, j);
+			buildings.push(b);
+		} else if (state == 'FARM') {
+			var b = generateFarm();
+			registerBuildingToMap(b, map, i, j);
+			map.data[i*map.width+j] = 1;
+			buildings.push(b);
+		} else if (state == 'RANCH') {
+			var b = generatePigRanch();
+			registerBuildingToMap(b, map, i, j);
+			buildings.push(b);
+		} else if (state == 'PIG') {
+			var p = generatePig(new Vec2((j+0.5)*map.size, (i+0.5)*map.size));
+			p.team = 1;
+			f.push(p);
+		}else if (state == 'FENCE') {
+			var b = generateFence();
+			registerBuildingToMap(b, map, i, j);
+			buildings.push(b);
 		}
 		path = findPath(start, end, map);
 	});
@@ -161,29 +281,39 @@
 		} else if (state == 'END') {
 			end = [i, j];
 		} else if (state == 'BLOCK'){
-			map[i*map.width+j] = 0;
+			var b = generateBlock();
+			registerBuildingToMap(b, map, i, j);
+			buildings.push(b);
 		} else if (state == 'CAMERA') {
 			camera = [oldcamera[0] + (pivot[0] - e.offsetX)*1.2, oldcamera[1] + (pivot[1] - e.offsetY)*1.2];
-		}
+		} 
 		path = findPath(start, end, map);
 	});
 	document.addEventListener('keydown', function(e) {
-		if (e.which == 65) {
+		if (e.which == 65) {//a
 			state = 'START';
-		} else if (e.which == 66) {
+		} else if (e.which == 66) {//b
 			state = 'END';
-		} else if (e.which == 67) {
+		} else if (e.which == 67) {//c
 			state = 'BLOCK';
-		} else if (e.which == 68) {
+		} else if (e.which == 68) {//d
 			state = 'CAMERA';
+		} else if (e.which == 69) {//e
+			state = 'TOWER';
+		} else if (e.which == 70) {//f
+			state = 'FARM';
+		}  else if (e.which == 71) {//g
+			state = 'RANCH';
+		}  else if (e.which == 72) {//h
+			state = 'PIG';
+		}else if (e.which == 73) {//h
+			state = 'FENCE';
 		} else if (e.which == 13) {
-			var cppath = [];
-			for (var i = 0; i < path.length; ++i) {
-				cppath.push(new Vec2((path[i][1]+0.5)*size,(path[i][0]+0.5)*size));
-			}
+			var cppath = transformPathToVec2D(path, map);
 			for(var i = 0; i < f.length; ++i) {
 				f[i].pos = new Vec2(start[1]*size+size/2, start[0]*size+size/2);
 				f[i].velocity.x = f[i].velocity.y = f[i].force.x = f[i].force.y = 0;
+				f[i].orientation = 0;
 				f[i].setPath(cppath.slice());
 			}
 		}

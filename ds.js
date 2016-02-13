@@ -119,3 +119,29 @@ PriorityQueueNode.prototype.setRight = function(node) {
 	this.right = node;
 	node.parent = this;
 }
+
+
+
+
+function Queue() {
+	this.stackIn = [];
+	this.stackOut = [];
+}
+
+Queue.prototype.push = function(x) {
+	this.stackIn.push(x);
+}
+
+Queue.prototype.pop = function() {
+	if (this.stackOut.length + this.stackIn.length == 0) return null;
+	if (this.stackOut.length == 0) {
+		while (this.stackIn.length > 0) {
+			this.stackOut.push(this.stackIn.pop());
+		}
+	}
+	return this.stackOut.pop();
+}
+
+Queue.prototype.empty = function() {
+	return this.stackIn.length + this.stackOut.length == 0;
+}
