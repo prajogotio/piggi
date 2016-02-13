@@ -13,11 +13,15 @@ var asset = {
 		"asset/tower.png", 
 		"asset/tower_death.png",
 		"asset/rice_field.png", 
+		"asset/rice_field_death.png",
 		"asset/pig_ranch.png",
 		"asset/pig_ranch_death.png",
 		"asset/block.png", 
 		"asset/fence.png",
+		"asset/fence_death.png",
 		"asset/arrow.png",
+		"asset/arrow_death.png",
+		"asset/throne.png",
 		"asset/mouse.png",
 		"asset/mouse_shadow.png",
 		"asset/grass01.jpg", 
@@ -31,6 +35,9 @@ var asset = {
 
 var COMMAND = {
 	'BUILD_TOWER' : 0,
+	'BUILD_FARM' : 1,
+	'BUILD_PIG_RANCH' : 2,
+	'BUILD_FENCE' : 3,
 }
 
 var gameState = {
@@ -78,7 +85,7 @@ function allAssetsLoadedHandler() {
 }
 
 function startGame() {
-	gameState = createNewGame(32, 32, "asset/grass01.jpg");
+	gameState = createNewGame(20, 32, "asset/grass01.jpg");
 	registerEventHandler();
 	gameState.scheduler = setInterval(function() {
 		handleLocalCommand();
@@ -101,6 +108,7 @@ function createNewGame(mapWidth, mapHeight, mapURI) {
 		},
 		deadflocks : [],
 		deadarrows : [],
+		deadbuildings : [],
 
 		flocks : [],
 		buildings : [],
@@ -160,7 +168,7 @@ function renderGame() {
 	
 
 	// render the rest
-	var all = [gameState.deadflocks, gameState.deadarrows, gameState.buildings, gameState.flocks, gameState.arrows];
+	var all = [gameState.deadbuildings, gameState.buildings, gameState.deadflocks, gameState.deadarrows, gameState.flocks, gameState.arrows];
 
 	for(var i = 0; i < all.length; ++i) {
 		for(var j = 0; j < all[i].length; ++j){
@@ -188,19 +196,19 @@ function drawMouse(g) {
 }
 
 function stateDependentRendering(g) {
-	if (clientState.state == 'TOWER') {
+	if (clientState.state == 'BUILDING') {
 		var pos = computeMapLocation(clientState.mouse[0]+clientState.camera[0],clientState.mouse[1]+clientState.camera[1]);
 		g.save();
-		g.fillStyle = (isLandOccupied(pos[0],pos[1],2) ? "red":"green");
+		g.fillStyle = (isLandOccupied(pos[0],pos[1],clientState.buildingSize) ? "red":"green");
 		g.globalAlpha = 0.5;
-		g.fillRect(pos[1]*gameState.map.size-clientState.camera[0],pos[0]*gameState.map.size-clientState.camera[1],2*gameState.map.size,2*gameState.map.size);
+		g.fillRect(pos[1]*gameState.map.size-clientState.camera[0],pos[0]*gameState.map.size-clientState.camera[1],clientState.buildingSize*gameState.map.size,clientState.buildingSize*gameState.map.size);
 		g.restore();
 	}
 }
 
 function updateGame() {
 
-	var all = [gameState.flocks, gameState.buildings, gameState.arrows];
+	var all = [gameState.deadbuildings, gameState.deadflocks, gameState.deadarrows, gameState.flocks, gameState.buildings, gameState.arrows];
 
 	for(var i = 0; i < all.length; ++i) {
 		for(var j = 0; j < all[i].length; ++j){
@@ -208,8 +216,48 @@ function updateGame() {
 		}
 	}
 
-	// clean up
+	garbageCollection();
+
+}
+
+
+function garbageCollection() {
+	// remove garbage collectible death
 	var tmp = [];
+	for(var i = 0; i < gameState.deadflocks.length; ++i) {
+		if (!gameState.deadflocks[i].garbageCollectible()) {
+			tmp.push(gameState.deadflocks[i]);
+		} else {
+			gameState.deadflocks[i].cleanUp(gameState.flocks, gameState.map);
+		}
+	}
+	gameState.deadflocks = tmp;
+
+	tmp = [];
+	for(var i = 0; i < gameState.deadarrows.length; ++i) {
+		if (!gameState.deadarrows[i].garbageCollectible()) {
+			tmp.push(gameState.deadarrows[i]);
+		} else {
+			gameState.deadarrows[i].cleanUp(gameState.flocks, gameState.map);
+		}
+	}
+	gameState.deadarrows = tmp;
+
+	tmp = [];
+	for(var i = 0; i < gameState.deadbuildings.length; ++i) {
+		if (!gameState.deadbuildings[i].garbageCollectible()) {
+			tmp.push(gameState.deadbuildings[i]);
+		} else {
+			gameState.deadbuildings[i].cleanUp(gameState.flocks, gameState.map);
+		}
+	}
+	gameState.deadbuildings = tmp;
+
+
+
+
+	// collect death
+	tmp = [];
 	for(var i = 0; i < gameState.flocks.length; ++i) {
 		if (gameState.flocks[i].isAlive) {
 			tmp.push(gameState.flocks[i]);
@@ -228,8 +276,17 @@ function updateGame() {
 		}
 	}
 	gameState.arrows = tmp;
-}
 
+	tmp = [];
+	for(var i = 0; i < gameState.buildings.length; ++i) {
+		if (gameState.buildings[i].isAlive) {
+			tmp.push(gameState.buildings[i]);
+		} else {
+			gameState.deadbuildings.push(gameState.buildings[i]);
+		}
+	}
+	gameState.buildings = tmp;
+}
 
 
 function registerEventHandler() {
@@ -293,11 +350,11 @@ function registerEventHandler() {
 	function mouseDownCallback(e) {
 		var x = clientState.mouse[0]+clientState.camera[0];
 		var y = clientState.mouse[1]+clientState.camera[1];
-		if (clientState.state == 'TOWER') {
+		if (clientState.state == 'BUILDING') {
 			var pos = computeMapLocation(x, y);
-			if (!isLandOccupied(pos[0], pos[1], 2)) {
+			if (!isLandOccupied(pos[0], pos[1], clientState.buildingSize)) {
 				clientState.state = 'NONE';
-				issueCommand(COMMAND.BUILD_TOWER, [pos[0], pos[1], clientState.team]);
+				issueCommand(clientState.currentCommand, [pos[0], pos[1], clientState.team]);
 			}
 		}
 	}
@@ -306,15 +363,42 @@ function registerEventHandler() {
 		var x = clientState.mouse[0]+clientState.camera[0];
 		var y = clientState.mouse[1]+clientState.camera[1];
 		if (e.which == 65) {
+			// HELPER, REMOVE LATER
 			// generate pig
 			gameState.flocks.push(new Pig(new Vec2(x,y), clientState.team));
 		}
-		if (e.which == 66) {
+
+		else if (e.which == 84) {
+			// 'T'
 			// generate tower
-			clientState.state = 'TOWER';
+			clientState.state = 'BUILDING';
+			clientState.currentCommand = COMMAND.BUILD_TOWER;
+			clientState.buildingSize = 2;
 		}
 
-		if (e.which == 13) {
+		else if (e.which == 70) {
+			// 'F'
+			// generate farm
+			clientState.state = 'BUILDING';
+			clientState.currentCommand = COMMAND.BUILD_FARM;
+			clientState.buildingSize = 1;
+		}
+
+		else if (e.which == 69) {
+			// 'E'
+			// generate fence
+			clientState.state = 'BUILDING';
+			clientState.currentCommand = COMMAND.BUILD_FENCE;
+			clientState.buildingSize = 1;
+		}
+
+		else if (e.which == 81) {
+			// 'Q'
+			clientState.state = 'NONE';
+		}
+
+		else if (e.which == 13) {
+			// HELPER, REMOVE LATER
 			clientState.team++;
 			clientState.team %= 2;
 		}
@@ -329,10 +413,19 @@ function registerEventHandler() {
 }
 
 function isLandOccupied(row, col, size) {
+	// is there building
 	for(var i = 0; i < size; ++i){
-		for (var j=0;j<size;++j){
+		for (var j = 0; j < size; ++j){
 			if (gameState.map.entry[(row+i)*gameState.map.width+(col+j)]) {
 				return true;
+			}
+		}
+	}
+	// is there flocks
+	for(var i = 0; i < gameState.flocks.length; ++i) {
+		for(var dr = 0; dr < size; ++dr){
+			for(var dc = 0; dc < size; ++dc) {
+				if (gameState.flocks[i].collidesWithCell(gameState.map, [row+dr, col+dc])) return true;
 			}
 		}
 	}
@@ -354,6 +447,12 @@ function executeCommand(c) {
 	if (type == COMMAND.BUILD_TOWER) {
 		gameState.buildings.push(new Tower(params[0], params[1], params[2]));
 	}
+	else if (type == COMMAND.BUILD_FARM) {
+		gameState.buildings.push(new Farm(params[0], params[1], params[2]));
+	}
+	else if (type == COMMAND.BUILD_FENCE) {
+		gameState.buildings.push(new Fence(params[0], params[1], params[2]));
+	}
 }
 
 function handleLocalCommand() {
@@ -362,6 +461,6 @@ function handleLocalCommand() {
 		if (localLog[i][0] < gameState.timestep) {
 			continue;
 		}
-		executeCommand(localLog[i])
+		executeCommand(localLog[i]);
 	}
 }

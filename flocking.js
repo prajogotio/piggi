@@ -10,8 +10,8 @@ function Flocker(mass, pos, radius) {
 	// behavior parameter
 	this.AGGRESIVENESS = 400;
 	this.RADIUS_OF_ACCEPTANCE = 4;
-	this.MAXIMUM_SPEED = 2.3;
-	this.AVOIDANCE_SPEED = 2;
+	this.MAXIMUM_SPEED = 1.5;
+	this.AVOIDANCE_SPEED = 1.1;
 	this.TARGET_RADIUS = 64;
 	this.steeringEffect = 1.3;
 	this.attackRadius = 16;
@@ -33,7 +33,7 @@ function Flocker(mass, pos, radius) {
 	this.state = this.STANDBY;
 
 	// AI control
-	this.ENVIRONMENT_CHECK_DELAY = 40;
+	this.ENVIRONMENT_CHECK_DELAY = 100;
 	this.lastEnvironmentCheck = -10;
 	this.updateCount = 0;
 
@@ -53,6 +53,10 @@ function Flocker(mass, pos, radius) {
 	this.maxHealthPoints = 100;
 
 	this.provoked = false;
+
+	// for rendering after death
+	this.PERSISTENCE = 1000;
+	this.timeOfDeath = -1;
 }
 
 Flocker.prototype.seek = function() {
@@ -75,9 +79,9 @@ Flocker.prototype.integrate = function() {
 	}
 
 	if (this.target == null) {
-		this.velocity = this.velocity.times(0.9);
+		this.velocity = this.velocity.times(0.95);
 	} else if (this.target.minus(this.pos).length() < this.TARGET_RADIUS) {
-		this.velocity = this.velocity.times(0.9);
+		this.velocity = this.velocity.times(0.95);
 		this.target = this.targetStack.pop();
 	}
 
@@ -94,8 +98,8 @@ Flocker.prototype.getInteractionType = function(flock) {
 }
 
 Flocker.prototype.update = function(flock, map) {
-	if (!this.isAlive) return;
 	this.updateCount++;
+	if (!this.isAlive) return;
 
 	var seperation = 0.2;
 	var alignment = 0.04;
@@ -185,7 +189,7 @@ Flocker.prototype.update = function(flock, map) {
 		var mpos = [Math.floor(this.pos.y/map.size) ,Math.floor(this.pos.x/map.size)];
 		for(var dr = -1; dr <= 1; ++dr) {
 			for(var dc = -1; dc <= 1; ++dc) {
-				resolveCollisionWithMap(this, map, [mpos[0]+dr, mpos[1]+dc]);
+				this.resolveCollisionWithMap(map, [mpos[0]+dr, mpos[1]+dc]);
 			}
 		}
 	}
@@ -219,8 +223,8 @@ Flocker.prototype.checkSurrounding = function(flock, map) {
 
 	if (k!=-1){
 		if (this.lockOnTarget && !this.lockOnTarget.MOVING_TARGET) return;
-		this.setLockOnTarget(flock[k], map);
-		return;
+		var reachable = this.setLockOnTarget(flock[k], map);
+		if (reachable) return;
 	}
 
 
@@ -274,6 +278,8 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 		if (!this.lockOnTarget.isAlive) {
 			this.lockOnTarget = null;
 			this.state = this.STANDBY;
+			this.target = null;
+			this.targetStack = [];
 			this.provoked = false;
 			return;
 		}
@@ -302,8 +308,8 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 					this.lastAttack = this.updateCount;
 				}
 			}
-		} else if (this.state == this.ATTACKING) {
-			// if already attacking, chase after the enemy
+		} else if (this.state != this.MOVING && this.state != this.STANDBY) {
+			// if already attacking or eating, chase after the enemy straigth away
 			this.target = this.lockOnTarget.pos;
 		}
 
@@ -325,7 +331,7 @@ Flocker.prototype.setLockOnTarget = function(obj, map) {
 	if (obj.pos.minus(this.pos) <= map.size) {
 		this.targetStack = [];
 		this.target = obj.pos;
-		return;
+		return true;
 	}
 
 	var curpos = [Math.floor(this.pos.y/map.size), Math.floor(this.pos.x/map.size)];
@@ -342,6 +348,7 @@ Flocker.prototype.setLockOnTarget = function(obj, map) {
 	cp[0] = obj.pos;
 	cp[cp.length-1] = this.pos;
 	this.setPath(cp);
+	return p.length > 0 && row == p[0][1] && col == p[0][0];
 }
 
 
@@ -356,7 +363,7 @@ Flocker.prototype.receiveDamage = function(dmg) {
 		this.healthPoints = 0;
 		this.isAlive = false;
 		this.state = this.DEAD;
-		this.timeOfDeath = Date.now();
+		this.timeOfDeath = this.updateCount;
 
 		// clean up
 		if (this.lockOnTarget) {
@@ -366,14 +373,21 @@ Flocker.prototype.receiveDamage = function(dmg) {
 	}
 }
 
-function resolveCollisionWithMap(flock, map, mpos) {
-	if (mpos[0]<0 || mpos[1]<0 || mpos[0]>=map.height || mpos[1]>=map.width) return;
-	if (mpos[1]*map.size > flock.pos.x+flock.radius || (mpos[1]+1)*map.size < flock.pos.x-flock.radius ||
-		mpos[0]*map.size > flock.pos.y+flock.radius || (mpos[0]+1)*map.size < flock.pos.y-flock.radius) return;
+Flocker.prototype.cleanUp = function(flock, map) {
+
+}
+
+Flocker.prototype.garbageCollectible = function() {
+	return !this.isAlive && (this.updateCount-this.timeOfDeath >= this.PERSISTENCE);
+}
+
+Flocker.prototype.resolveCollisionWithMap = function(map, mpos) {
+	var PENETRATION_RESOLUTION = 0.1;
+	if (!this.collidesWithCell(map, mpos)) return;
 	var idx = mpos[0]*map.width+mpos[1];
 	if (idx > 0 && idx < map.data.length) {
 		if (map.data[idx]==0) {
-			var dij = flock.pos.minus(new Vec2((mpos[1]+0.5)*map.size, (mpos[0]+0.5)*map.size));
+			var dij = this.pos.minus(new Vec2((mpos[1]+0.5)*map.size, (mpos[0]+0.5)*map.size));
 			var penetration = map.size-Math.abs(dij.x);
 			var axis = new Vec2(Math.sign(dij.x),0);
 			if (Math.abs(dij.y) > Math.abs(dij.x)) {
@@ -381,12 +395,16 @@ function resolveCollisionWithMap(flock, map, mpos) {
 				axis.x = 0;
 				axis.y = Math.sign(dij.y);
 			}
-			flock.pos = flock.pos.plus(axis.times(penetration*0.1));
+			this.pos = this.pos.plus(axis.times(penetration*PENETRATION_RESOLUTION));
 		}
 	}
 }
 
-
+Flocker.prototype.collidesWithCell = function(map, mpos) {
+	return !(mpos[0]<0 || mpos[1]<0 || mpos[0]>=map.height || mpos[1]>=map.width 
+		|| mpos[1]*map.size > this.pos.x+this.radius || (mpos[1]+1)*map.size < this.pos.x-this.radius 
+		|| mpos[0]*map.size > this.pos.y+this.radius || (mpos[0]+1)*map.size < this.pos.y-this.radius);
+}
 
 
 Flocker.prototype.drawTest = function(g) {
@@ -424,6 +442,13 @@ FlockPrite.prototype.setSprite = function(type, sprite) {
 
 FlockPrite.prototype.render = function(g) {
 	g.save();
+	if (!this.isAlive) {
+		// step wise alpha degradation
+		var alpha = 1 - Math.max(0, ((this.updateCount-this.timeOfDeath)/this.PERSISTENCE));
+		if (alpha < 0.50) alpha = 0.50;
+		else alpha = 1
+		g.globalAlpha = alpha;
+	}
 	g.translate(Math.floor(this.pos.x), Math.floor(this.pos.y));
 	g.rotate(Math.floor((this.orientation+90)/180*Math.PI * 10)/10);
 	g.translate(-this.radius, -this.radius);
@@ -465,7 +490,7 @@ function Building(size, interactionDistance) {
 	this.ATTACK_TYPE = 0;
 	this.EAT_TYPE = 1;
 	this.NO_INTERACTION = 2;
-	this.HAS_HEALTHPOINT = true;
+	this.SHOW_HEALTHBAR = true;
 
 	// behavior constant
 	this.MOVING_TARGET = false;
@@ -499,6 +524,11 @@ function Building(size, interactionDistance) {
 	this.isAlive = true;
 
 	this.updateCount = 0;
+
+
+	// for rendering after death
+	this.PERSISTENCE = 120;
+	this.timeOfDeath = -1;
 }
 
 Building.prototype.setSprite = function(type, sprite) {
@@ -509,12 +539,21 @@ Building.prototype.render = function(g) {
 	if (this.sprites[this.state]) {
 		g.save();
 		g.translate(this.pos.x - this.size/2, this.pos.y - this.size/2);
+		g.save();
+		if (!this.isAlive) {
+			// step wise alpha degradation
+			var alpha = 1 - Math.max(0, ((this.updateCount-this.timeOfDeath)/this.PERSISTENCE));
+			if (alpha < 0.50) alpha = 0.50;
+			else alpha = 1
+			g.globalAlpha = alpha;
+		}
 		this.sprites[this.state].render(g, this.size, this.size);
+		g.restore();
 		g.fillStyle = "black";
-		if (this.HAS_HEALTHPOINT){
-			g.fillRect(0, 0, this.size, 8);
+		if (this.SHOW_HEALTHBAR){
+			g.fillRect(2, 0, this.size-4, 8);
 			g.fillStyle = "yellow";
-			g.fillRect(1, 1, (this.size-2) * this.healthPoints/this.maxHealthPoints, 6);
+			g.fillRect(3, 1, (this.size-6) * this.healthPoints/this.maxHealthPoints, 6);
 		}
 		g.restore();
 	}
@@ -547,6 +586,14 @@ Building.prototype.update = function(flock, map) {
 	this.updateCount++;
 }
 
+Building.prototype.cleanUp = function(flock, map) {
+	removeBuildingFromMap(this, map);
+}
+
+Building.prototype.garbageCollectible = function() {
+	return Flocker.prototype.garbageCollectible.call(this);
+}
+
 function registerBuildingToMap(building, map, row, col) {
 	var size = Math.floor(building.size/map.size);
 	for (var i = 0; i < size;++i){
@@ -567,8 +614,9 @@ function removeBuildingFromMap(building, map) {
 	for (var i = 0; i < size;++i){
 		for (var j = 0; j < size; ++j) {
 			map.data[(building.row+i)*map.width+building.col+j] = 1;
-			map.entry[(row+i)*map.width+col+j] = null;
+			map.entry[(building.row+i)*map.width+building.col+j] = null;
 		}
 	}
 }
+
 
