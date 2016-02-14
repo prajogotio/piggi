@@ -122,6 +122,7 @@ function createNewGame(mapWidth, mapHeight, mapURI) {
 			entry : new Array(mapWidth*mapHeight).fill(null),
 			imgBuffer : asset.images[mapURI],
 			size : 64,
+			lastUpdated : 0,
 		},
 		thrones : [],
 		ranchTier : [1, 1],
@@ -196,6 +197,17 @@ function renderGame() {
 			all[i][j].render(g);
 		}
 	}
+
+	// for (var i = 0; i < gameState.flocks.length; ++i) {
+	// 	if(gameState.flocks[i].lockOnTarget) {
+	// 		g.fillStyle = "red";
+	// 		g.fillRect(gameState.flocks[i].lockOnTarget.pos.x,gameState.flocks[i].lockOnTarget.pos.y, 10, 10);
+	// 		for (var j=0;j<gameState.flocks[i].targetStack.length;++j){
+	// 			g.fillStyle = "orange";
+	// 			g.fillRect(gameState.flocks[i].targetStack[j].x, gameState.flocks[i].targetStack[j].y, 8, 8);
+	// 		}
+	// 	}
+	// }
 
 	g.restore();
 
@@ -407,16 +419,16 @@ function registerEventHandler() {
 				clientState.buildingSize = 2;
 			}
 
-			else if (e.which == 70) {
-				// 'F'
+			else if (e.which == 65) {
+				// 'A'
 				// generate farm
 				clientState.state = 'BUILDING';
 				clientState.currentCommand = COMMAND.BUILD_FARM;
 				clientState.buildingSize = 1;
 			}
 
-			else if (e.which == 69) {
-				// 'E'
+			else if (e.which == 70) {
+				// 'F'
 				// generate fence
 				clientState.state = 'BUILDING';
 				clientState.currentCommand = COMMAND.BUILD_FENCE;
@@ -444,7 +456,7 @@ function registerEventHandler() {
 		}
 
 
-		else if (e.which == 65) {
+		else if (e.which == 66) {
 			// HELPER, REMOVE LATER
 			// generate pig
 			gameState.flocks.push(new Pig(new Vec2(x,y), clientState.team));

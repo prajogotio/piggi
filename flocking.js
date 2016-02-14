@@ -13,8 +13,8 @@ function Flocker(mass, pos, radius) {
 	this.RADIUS_OF_ACCEPTANCE = 4;
 	this.MAXIMUM_SPEED = 1.5;
 	this.AVOIDANCE_SPEED = 1.1;
-	this.TARGET_RADIUS = 20;
-	this.steeringEffect = 1.0;
+	this.TARGET_RADIUS = 32;
+	this.steeringEffect = 2.4;
 	this.attackRadius = 32;
 	this.MOVING_TARGET = true;
 
@@ -30,7 +30,7 @@ function Flocker(mass, pos, radius) {
 
 	this.target = null;		// pathfinding destination target
 	this.targetStack = [];	// pathfinding path
-
+	this.pathTimestamp = -1;
 
 	this.state = this.STANDBY;
 
@@ -337,12 +337,20 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 
 
 Flocker.prototype.setLockOnTarget = function(obj, map) {
+	if (obj == this.lockOnTarget) {
+		// if it is not moving target, and map has not changed
+		// continue with previous path
+		if (map.lastUpdated == this.pathTimestamp) return true;
+	}
+
 	if (this.lockOnTarget != null) {
 		this.lockOnTarget.interactionCount--;
 	}
 	this.provoked = true;
 	this.lockOnTarget = obj;
 	obj.interactionCount++;
+
+
 	if (obj.pos.minus(this.pos) <= map.size) {
 		this.targetStack = [];
 		this.target = obj.pos;
@@ -390,10 +398,9 @@ Flocker.prototype.setLockOnTarget = function(obj, map) {
 
 	var p = findPath(curpos, [row, col], map, choices);
 	var cp = transformPathToVec2D(p, map);
-	cp[0] = obj.pos;
+	//cp[0] = obj.pos;
 	cp[cp.length-1] = this.pos;
 	this.setPath(cp);
-	
 
 	var reachable = p.length > 0 && Math.abs(row - p[0][0]) + Math.abs(col-p[0][1]) <= 1;
 
@@ -406,6 +413,7 @@ Flocker.prototype.setLockOnTarget = function(obj, map) {
 			}
 		}
 	}
+	this.pathTimestamp = map.lastUpdated;
 
 	return reachable;
 }
@@ -653,30 +661,3 @@ Building.prototype.cleanUp = function(flock, map) {
 Building.prototype.garbageCollectible = function() {
 	return Flocker.prototype.garbageCollectible.call(this);
 }
-
-function registerBuildingToMap(building, map, row, col) {
-	var size = Math.floor(building.size/map.size);
-	for (var i = 0; i < size;++i){
-		for (var j = 0; j < size; ++j) {
-			map.data[(row+i)*map.width+col+j] = 0;
-			map.entry[(row+i)*map.width+col+j] = building;
-		}
-	}
-	building.pos.x = (col+size/2)*map.size;
-	building.pos.y = (row+size/2)*map.size;
-	building.row = row;
-	building.col = col;
-}
-
-
-function removeBuildingFromMap(building, map) {
-	var size = Math.floor(building.size/map.size);
-	for (var i = 0; i < size;++i){
-		for (var j = 0; j < size; ++j) {
-			map.data[(building.row+i)*map.width+building.col+j] = 1;
-			map.entry[(building.row+i)*map.width+building.col+j] = null;
-		}
-	}
-}
-
-

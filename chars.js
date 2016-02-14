@@ -129,7 +129,7 @@ Farm.prototype = Object.create(Building.prototype);
 
 
 function Fence(row, col, team) {
-	Building.call(this, 64, 76);
+	Building.call(this, 64, 100);
 	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/fence.png"], 0, 0, 128, 128, 1, 100));
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/fence_death.png"], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
@@ -145,10 +145,15 @@ function Fence(row, col, team) {
 
 Fence.prototype = Object.create(Building.prototype);
 
+Fence.prototype.canInteract = function(flock) {
+	// can't attack fence if it is not blocking the pig
+	// from reaching the target
+	return Building.prototype.canInteract.call(this, flock) && (flock.lockOnTarget != null && flock.targetStack.length == 0);
+}
 
 
 function SuperFence(row, col, team) {
-	Building.call(this, 64, 76);
+	Building.call(this, 64, 100);
 	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/super_fence.png"], 0, 0, 128, 128, 1, 100));
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/fence_death.png"], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
@@ -309,9 +314,32 @@ Javelin.prototype = Object.create(Arrow.prototype);
 
 
 
+function registerBuildingToMap(building, map, row, col) {
+	var size = Math.floor(building.size/map.size);
+	for (var i = 0; i < size;++i){
+		for (var j = 0; j < size; ++j) {
+			map.data[(row+i)*map.width+col+j] = 0;
+			map.entry[(row+i)*map.width+col+j] = building;
+		}
+	}
+	building.pos.x = (col+size/2)*map.size;
+	building.pos.y = (row+size/2)*map.size;
+	building.row = row;
+	building.col = col;
+	map.lastUpdated = gameState.timestep;
+}
 
 
-
+function removeBuildingFromMap(building, map) {
+	var size = Math.floor(building.size/map.size);
+	for (var i = 0; i < size;++i){
+		for (var j = 0; j < size; ++j) {
+			map.data[(building.row+i)*map.width+building.col+j] = 1;
+			map.entry[(building.row+i)*map.width+building.col+j] = null;
+		}
+	}
+	map.lastUpdated = gameState.timestep;
+}
 
 
 
