@@ -12,7 +12,7 @@ function Flocker(mass, pos, radius) {
 	this.BUILDING_AGGRESIVENESS = 640;
 	this.RADIUS_OF_ACCEPTANCE = 4;
 	this.MAXIMUM_SPEED = 1.5;
-	this.AVOIDANCE_SPEED = 1.1;
+	this.AVOIDANCE_SPEED = 1.5;
 	this.TARGET_RADIUS = 32;
 	this.steeringEffect = 2.4;
 	this.attackRadius = 32;
@@ -70,13 +70,16 @@ Flocker.prototype.seek = function() {
 }
 
 Flocker.prototype.integrate = function(map) {
-	acc = this.force.times(this.invMass);
+	var acc = this.force.times(this.invMass);
+	acc = upperbound(acc, this.AVOIDANCE_SPEED);
 	this.velocity = this.velocity.plus(acc);
 	this.velocity = upperbound(this.velocity, this.MAXIMUM_SPEED);
 
 	this.pos = this.pos.plus(this.velocity);
 
-	this.pos = this.pos.plus(this.steeringForce.times(this.invMass));
+	var vel = this.steeringForce.times(this.invMass);
+	vel = upperbound(vel, this.AVOIDANCE_SPEED);
+	this.pos = this.pos.plus(vel);
 
 	this.pos.x = Math.max(0, Math.min(this.pos.x, map.width*map.size-this.radius));
 	this.pos.y = Math.max(0, Math.min(this.pos.y, map.height*map.size-this.radius));
@@ -109,9 +112,9 @@ Flocker.prototype.update = function(flock, map) {
 	this.updateCount++;
 	if (!this.isAlive) return;
 
-	var seperation = 0.2;
+	var seperation = 1.0;
 	var alignment = 0.04;
-	var avoidance = 0.05;
+	var avoidance = 1.0;
 	var radius = 60.0;
 	var deltaT = 1/30;
 
@@ -128,12 +131,12 @@ Flocker.prototype.update = function(flock, map) {
 		if (this == flock[j]) continue;
 		var dij = this.pos.minus(flock[j].pos);
 		if (dij.length() < radius) {
-			var diff = expos.minus(flock[j].pos);
+			var diff = expos.minus(flock[j].pos).normalize();
 			if (diff.length() == 0) {
 				diff = new Vec2(1, j);
 				diff.normalize();
 			}
-			var flee = upperbound(diff, this.AVOIDANCE_SPEED * seperation);
+			var flee = diff.times(this.AVOIDANCE_SPEED * seperation);
 			this.steeringForce = this.steeringForce.plus(flee);
 		}
 	}
@@ -300,7 +303,7 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 		if (distToTarget <= this.radius + this.lockOnTarget.radius + this.attackRadius) {
 			// close enough, attack! (or eat)
 			this.targetStack = [];
-			this.target = null;
+			this.target = this.lockOnTarget.pos;
 			this.lockOnTarget.getInteractionType(this);
 
 			// attack events
