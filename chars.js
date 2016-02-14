@@ -31,9 +31,9 @@ Pig.prototype.update = function(flock, map) {
 
 function Boar(pos, team) {
 	FlockPrite.call(this, 100, pos, 32);
-	this.setSprite(this.STANDBY, new Sprite(asset.images["asset/boar_standby.png"], 0, 0, 128, 128, 4, 20));
-	this.setSprite(this.MOVING, new Sprite(asset.images["asset/boar_running.png"], 0, 0, 128, 128, 6, 12));
-	this.setSprite(this.ATTACKING, new Sprite(asset.images["asset/boar_angry.png"], 0, 0, 128, 128, 3, 20));
+	this.setSprite(this.STANDBY, new Sprite(asset.images["asset/boar_standby.png"], 0, 0, 128, 128, 2, 30));
+	this.setSprite(this.MOVING, new Sprite(asset.images["asset/boar_running.png"], 0, 0, 128, 128, 10, 12));
+	this.setSprite(this.ATTACKING, new Sprite(asset.images["asset/boar_attacking.png"], 0, 0, 128, 128, 3, 20));
 	this.setSprite(this.EATING, new Sprite(asset.images["asset/boar_eating.png"], 0, 0, 128, 128, 2, 30));
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/boar_death.png"], 0, 0, 128, 128, 1, 100));
 	this.sprites[this.ATTACKING].autoReset = false;
@@ -125,6 +125,29 @@ function Farm(row, col, team) {
 }
 
 Farm.prototype = Object.create(Building.prototype);
+
+
+
+function SuperFarm(row, col, team) {
+	Building.call(this, 64, 128);
+
+	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/super_rice_field.png"], 0, 0, 128, 128, 6, 200));
+	this.setSprite(this.DEAD, new Sprite(asset.images["asset/rice_field_death.png"], 0, 0, 128, 128, 1, 100));
+	registerBuildingToMap(this, gameState.map, row, col);
+	// farm is non blocking entity
+	gameState.map.data[row*gameState.map.width+col] = 1;
+
+	this.team = team;
+
+	this.interactionType = this.EAT_TYPE;
+	this.SHOW_HEALTHBAR = false;
+	this.healthPoints = 550;
+	this.PERSISTENCE = 300;
+	this.MAX_INTERACTION = 2;
+	this.radius = 0;
+}
+
+SuperFarm.prototype = Object.create(Farm.prototype);
 
 
 
@@ -242,7 +265,7 @@ PigHQ.prototype = Object.create(PigRanch.prototype);
 
 function Throne(row, col, team) {
 	Building.call(this, 128, 1000);
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/throne.png"], 0, 0, 128, 128, 8, 40));
+	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/throne.png"], 0, 0, 128, 128, 6, 40));
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/throne.png"], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
@@ -280,8 +303,9 @@ Arrow.prototype.update = function() {
 		return;
 	}
 	//visual effect
-	var DEAD_MARGIN = 15;
+	var DEAD_MARGIN = 17;
 	this.pos = this.destination.minus(this.startPoint).times(Math.min(this.updateCount,this.maxDelta-DEAD_MARGIN)/(this.maxDelta-DEAD_MARGIN)).plus(this.startPoint);
+	
 	if (this.updateCount+DEAD_MARGIN >= this.maxDelta) {
 		this.state = this.DEAD;
 		this.target.receiveDamage(this.damage);

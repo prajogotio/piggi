@@ -12,7 +12,7 @@ var asset = {
 		"asset/pig_death.png",
 		"asset/boar_running.png", 
 		"asset/boar_standby.png", 
-		"asset/boar_angry.png", 
+		"asset/boar_attacking.png", 
 		"asset/boar_eating.png",
 		"asset/boar_death.png",
 		"asset/tower.png", 
@@ -21,6 +21,7 @@ var asset = {
 		"asset/castle_death.png",
 		"asset/rice_field.png", 
 		"asset/rice_field_death.png",
+		"asset/super_rice_field.png",
 		"asset/pig_ranch.png",
 		"asset/pig_ranch_death.png",
 		"asset/pig_hq.png",
@@ -522,7 +523,11 @@ function executeCommand(c) {
 		}
 	}
 	else if (type == COMMAND.BUILD_FARM) {
-		gameState.buildings.push(new Farm(params[0], params[1], params[2]));
+		if (gameState.ranchTier[params[2]] == 1) {
+			gameState.buildings.push(new Farm(params[0], params[1], params[2]));
+		} else {
+			gameState.buildings.push(new SuperFarm(params[0], params[1], params[2]));
+		}
 	}
 	else if (type == COMMAND.BUILD_FENCE) {
 		if (gameState.towerTier[params[2]] == 1) {

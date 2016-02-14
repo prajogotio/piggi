@@ -89,10 +89,13 @@ Flocker.prototype.integrate = function(map) {
 	}
 
 	if (this.target == null) {
-		this.velocity = this.velocity.times(0.95);
+
 	} else if (this.target.minus(this.pos).length() < this.TARGET_RADIUS) {
 		//this.velocity = this.velocity.times(0.95);
 		this.target = this.targetStack.pop();
+	}
+	if (this.lockOnTarget && this.lockOnTarget.pos.minus(this.pos).length() < this.TARGET_RADIUS*0.8 && this.targetStack.length == 0) {
+		this.velocity = this.velocity.times(0.5);
 	}
 
 	this.force.x = this.force.y = 0;
