@@ -13,6 +13,18 @@ function findPath(start, target, map, otherTargets) {
 	if (start[0] < 0 || start[1] < 0 || start[0] >= map.height || start[1] >= map.width
 	|| target[0] < 0 || target[1] < 0 || target[0] >= map.height || target[1] >= map.width) return [];
 	
+	// sanitising otherTargets
+	if (otherTargets) {
+		var tmp = [];
+		for (var i = 0; i < otherTargets.length; ++i) {
+			if (map.data[otherTargets[i][0]*map.width+otherTargets[i][1]] != 0) {
+				tmp.push(otherTargets[i]);
+			}
+		}
+		otherTargets = tmp;
+	}
+
+
 	var mark = new Int32Array(map.data.length);
 	var par = new Int32Array(map.data.length).fill(-1);
 	var lsf = function(L, R) {
@@ -28,6 +40,14 @@ function findPath(start, target, map, otherTargets) {
 		if (currow < 0 || curcol < 0 || currow >= map.height || curcol >= map.width) return;
 		var idx = currow*map.width+curcol;
 		var curcost = Math.abs(target[0]-currow)+Math.abs(target[1]-curcol);
+		if (otherTargets) {
+			for (var i = 0; i < otherTargets.length; ++i) {
+				var possible = Math.abs(otherTargets[i][0]-currow)+Math.abs(otherTargets[i][1]-curcol);
+				if (possible < curcost) {
+					curcost = possible;
+				}
+			}
+		}
 		if (mark[idx] > 0) return;
 		if (map.data[idx] == 0) return;
 		pq.push({cost:dist+1+curcost, par:row*map.width+col, dist:dist+1, pos:[currow, curcol]});
@@ -56,12 +76,15 @@ function findPath(start, target, map, otherTargets) {
 			break;
 		}
 		if (otherTargets) {
-			for (var i = 0; i < otherTargets; ++i) {
-				if (otherTargets[i][0] == row && otherTargets[1] == col) {
+			var found = false;
+			for (var i = 0; i < otherTargets.length; ++i) {
+				if (otherTargets[i][0] == row && otherTargets[i][1] == col) {
 					loc = idx;
+					found = true;
 					break;
 				}
 			}
+			if (found) break;
 		}
 		insertPQ(row, col, -1, 0, dist);
 		insertPQ(row, col, 1, 0, dist);

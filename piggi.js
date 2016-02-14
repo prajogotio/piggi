@@ -10,17 +10,29 @@ var asset = {
 		"asset/pig_angry.png", 
 		"asset/pig_eating.png",
 		"asset/pig_death.png",
+		"asset/boar_running.png", 
+		"asset/boar_standby.png", 
+		"asset/boar_angry.png", 
+		"asset/boar_eating.png",
+		"asset/boar_death.png",
 		"asset/tower.png", 
 		"asset/tower_death.png",
+		"asset/castle.png",
+		"asset/castle_death.png",
 		"asset/rice_field.png", 
 		"asset/rice_field_death.png",
 		"asset/pig_ranch.png",
 		"asset/pig_ranch_death.png",
+		"asset/pig_hq.png",
+		"asset/pig_hq_death.png",
 		"asset/block.png", 
 		"asset/fence.png",
+		"asset/super_fence.png",
 		"asset/fence_death.png",
 		"asset/arrow.png",
 		"asset/arrow_death.png",
+		"asset/javelin.png",
+		"asset/javelin_death.png",
 		"asset/throne.png",
 		"asset/mouse.png",
 		"asset/mouse_shadow.png",
@@ -38,6 +50,8 @@ var COMMAND = {
 	'BUILD_FARM' : 1,
 	'BUILD_PIG_RANCH' : 2,
 	'BUILD_FENCE' : 3,
+	'UPGRADE_TOWER' : 4,
+	'UPGRADE_PIG_RANCH' : 5,
 }
 
 var gameState = {
@@ -110,6 +124,8 @@ function createNewGame(mapWidth, mapHeight, mapURI) {
 			size : 64,
 		},
 		thrones : [],
+		ranchTier : [1, 1],
+		towerTier : [1, 1],
 
 		deadflocks : [],
 		deadarrows : [],
@@ -368,37 +384,58 @@ function registerEventHandler() {
 		var x = clientState.mouse[0]+clientState.camera[0];
 		var y = clientState.mouse[1]+clientState.camera[1];
 		
+		if (clientState.state == 'UPGRADE') {
+			if (e.which == 84) {
+				// 'T'
+				// upgrade tower
+				issueCommand(COMMAND.UPGRADE_TOWER, [clientState.team]);
+				clientState.state = 'NONE';
+			}
 
-		if (e.which == 84) {
-			// 'T'
-			// generate tower
-			clientState.state = 'BUILDING';
-			clientState.currentCommand = COMMAND.BUILD_TOWER;
-			clientState.buildingSize = 2;
+			else if (e.which == 82) {
+				// 'R'
+				// upgrade ranch
+				issueCommand(COMMAND.UPGRADE_PIG_RANCH, [clientState.team]);
+				clientState.state = 'NONE';
+			}
+		} else {
+			if (e.which == 84) {
+				// 'T'
+				// generate tower
+				clientState.state = 'BUILDING';
+				clientState.currentCommand = COMMAND.BUILD_TOWER;
+				clientState.buildingSize = 2;
+			}
+
+			else if (e.which == 70) {
+				// 'F'
+				// generate farm
+				clientState.state = 'BUILDING';
+				clientState.currentCommand = COMMAND.BUILD_FARM;
+				clientState.buildingSize = 1;
+			}
+
+			else if (e.which == 69) {
+				// 'E'
+				// generate fence
+				clientState.state = 'BUILDING';
+				clientState.currentCommand = COMMAND.BUILD_FENCE;
+				clientState.buildingSize = 1;
+			}
+
+			else if (e.which == 82) {
+				// 'R'
+				// generate ranch
+				clientState.state = 'BUILDING';
+				clientState.currentCommand = COMMAND.BUILD_PIG_RANCH;
+				clientState.buildingSize = 2;
+			}
 		}
 
-		else if (e.which == 70) {
-			// 'F'
-			// generate farm
-			clientState.state = 'BUILDING';
-			clientState.currentCommand = COMMAND.BUILD_FARM;
-			clientState.buildingSize = 1;
-		}
-
-		else if (e.which == 69) {
-			// 'E'
-			// generate fence
-			clientState.state = 'BUILDING';
-			clientState.currentCommand = COMMAND.BUILD_FENCE;
-			clientState.buildingSize = 1;
-		}
-
-		else if (e.which == 82) {
-			// 'R'
-			// generate ranch
-			clientState.state = 'BUILDING';
-			clientState.currentCommand = COMMAND.BUILD_PIG_RANCH;
-			clientState.buildingSize = 2;
+		if (e.which == 85) {
+			// 'U'
+			// upgrade state
+			clientState.state = 'UPGRADE';
 		}
 
 		else if (e.which == 81) {
@@ -433,6 +470,7 @@ function isLandOccupied(row, col, size) {
 	// is there building
 	for(var i = 0; i < size; ++i){
 		for (var j = 0; j < size; ++j){
+			if (row+i < 0 || col+j < 0 || row+i >= gameState.map.height || col+j >= gameState.map.width) return true;
 			if (gameState.map.entry[(row+i)*gameState.map.width+(col+j)]) {
 				return true;
 			}
@@ -462,16 +500,54 @@ function executeCommand(c) {
 	var type = c[1];
 	var params = c[2];
 	if (type == COMMAND.BUILD_TOWER) {
-		gameState.buildings.push(new Tower(params[0], params[1], params[2]));
+		// params[0] row
+		// params[1] col
+		// params[2] team info
+		if (gameState.towerTier[params[2]] == 1) {
+			gameState.buildings.push(new Tower(params[0], params[1], params[2]));
+		} else {
+			gameState.buildings.push(new Castle(params[0], params[1], params[2]));
+		}
 	}
 	else if (type == COMMAND.BUILD_FARM) {
 		gameState.buildings.push(new Farm(params[0], params[1], params[2]));
 	}
 	else if (type == COMMAND.BUILD_FENCE) {
-		gameState.buildings.push(new Fence(params[0], params[1], params[2]));
+		if (gameState.towerTier[params[2]] == 1) {
+			gameState.buildings.push(new Fence(params[0], params[1], params[2]));
+		} else {
+			gameState.buildings.push(new SuperFence(params[0], params[1], params[2]));
+		}
 	}
 	else if (type == COMMAND.BUILD_PIG_RANCH) {
-		gameState.buildings.push(new PigRanch(params[0], params[1], params[2]));
+		if (gameState.ranchTier[params[2]] == 1) {
+			gameState.buildings.push(new PigRanch(params[0], params[1], params[2]));
+		} else {
+			gameState.buildings.push(new PigHQ(params[0], params[1], params[2]));
+		}
+	}
+
+	else if (type == COMMAND.UPGRADE_PIG_RANCH) {
+		// effect: pig upgraded
+		// ranch : upgraded
+		// farm : upgraded
+		// can only upgrade once
+		// params[0] is team info
+		if (gameState.ranchTier[params[0]] == 2) return;
+
+		gameState.ranchTier[params[0]] = 2;
+
+	}
+
+	else if (type == COMMAND.UPGRADE_TOWER) {
+		// fence : upgraded
+		// tower : upgraded
+		// can only upgrade once
+		// params[0] is team info
+		if (gameState.towerTier[params[0]] == 2) return;
+
+		gameState.towerTier[params[0]] = 2;
+
 	}
 }
 

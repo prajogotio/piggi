@@ -8,12 +8,13 @@ function Flocker(mass, pos, radius) {
 	this.DEAD = 4;
 
 	// behavior parameter
-	this.AGGRESIVENESS = 400;
+	this.FLOCK_AGGRESIVENESS = 200;
+	this.BUILDING_AGGRESIVENESS = 640;
 	this.RADIUS_OF_ACCEPTANCE = 4;
 	this.MAXIMUM_SPEED = 1.5;
 	this.AVOIDANCE_SPEED = 1.1;
-	this.TARGET_RADIUS = 64;
-	this.steeringEffect = 2;
+	this.TARGET_RADIUS = 20;
+	this.steeringEffect = 1.0;
 	this.attackRadius = 32;
 	this.MOVING_TARGET = true;
 
@@ -23,6 +24,7 @@ function Flocker(mass, pos, radius) {
 	this.invMass = (mass == 0 ? 0 : 1/mass);
 	this.pos = pos;
 	this.force = new Vec2(0, 0);
+	this.steeringForce = new Vec2(0, 0); // force that doesn't affect orientation
 	this.velocity = new Vec2(0, 0);
 	this.orientation = 0;
 
@@ -33,7 +35,7 @@ function Flocker(mass, pos, radius) {
 	this.state = this.STANDBY;
 
 	// AI control
-	this.ENVIRONMENT_CHECK_DELAY = 60;
+	this.ENVIRONMENT_CHECK_DELAY = 80;
 	this.lastEnvironmentCheck = -10;
 	this.updateCount = 0;
 
@@ -67,12 +69,17 @@ Flocker.prototype.seek = function() {
 	this.force = this.force.plus(force);
 }
 
-Flocker.prototype.integrate = function() {
+Flocker.prototype.integrate = function(map) {
 	acc = this.force.times(this.invMass);
 	this.velocity = this.velocity.plus(acc);
 	this.velocity = upperbound(this.velocity, this.MAXIMUM_SPEED);
 
 	this.pos = this.pos.plus(this.velocity);
+
+	this.pos = this.pos.plus(this.steeringForce.times(this.invMass));
+
+	this.pos.x = Math.max(0, Math.min(this.pos.x, map.width*map.size-this.radius));
+	this.pos.y = Math.max(0, Math.min(this.pos.y, map.height*map.size-this.radius));
 
 	if (this.target != null) {
 		this.orientation = getAngle(this.velocity);
@@ -81,11 +88,12 @@ Flocker.prototype.integrate = function() {
 	if (this.target == null) {
 		this.velocity = this.velocity.times(0.95);
 	} else if (this.target.minus(this.pos).length() < this.TARGET_RADIUS) {
-		this.velocity = this.velocity.times(0.95);
+		//this.velocity = this.velocity.times(0.95);
 		this.target = this.targetStack.pop();
 	}
 
 	this.force.x = this.force.y = 0;
+	this.steeringForce.x = this.steeringForce.y = 0;
 }
 
 Flocker.prototype.setPath = function(path) {
@@ -103,7 +111,7 @@ Flocker.prototype.update = function(flock, map) {
 
 	var seperation = 0.2;
 	var alignment = 0.04;
-	var avoidance = 0.5;
+	var avoidance = 0.05;
 	var radius = 60.0;
 	var deltaT = 1/30;
 
@@ -126,7 +134,7 @@ Flocker.prototype.update = function(flock, map) {
 				diff.normalize();
 			}
 			var flee = upperbound(diff, this.AVOIDANCE_SPEED * seperation);
-			this.force = this.force.plus(flee);
+			this.steeringForce = this.steeringForce.plus(flee);
 		}
 	}
 
@@ -166,7 +174,7 @@ Flocker.prototype.update = function(flock, map) {
 		}
 	}
 
-	this.integrate();
+	this.integrate(map);
 
 	//alignment
 	var aveOrient = 0;
@@ -218,7 +226,7 @@ Flocker.prototype.checkSurrounding = function(flock, map) {
 		if (!flock[i].isAlive) continue;
 		if (flock[i].team != this.team) {
 			var curdist = flock[i].pos.minus(this.pos).length();
-			if (curdist > this.AGGRESIVENESS) continue;
+			if (curdist > this.FLOCK_AGGRESIVENESS) continue;
 			if (dist > curdist) {
 				dist = curdist;
 				k = i;
@@ -259,7 +267,7 @@ Flocker.prototype.checkSurrounding = function(flock, map) {
 		var cur = q.pop();
 		var idx = computeIndex(map, cur);
 		var pos = new Vec2((cur[1]+0.5)*map.size, (cur[0]+0.5)*map.size);
-		if (this.pos.minus(pos).length() >= this.AGGRESIVENESS) continue;
+		if (this.pos.minus(pos).length() >= this.BUILDING_AGGRESIVENESS) continue;
 
 		if (map.entry[idx]) {
 			var building = map.entry[idx];
@@ -314,7 +322,7 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 					this.lastAttack = this.updateCount;
 				}
 			}
-		} else if (!this.target && distToTarget <= map.size) {
+		} else if (!this.target && distToTarget < 2*map.size) {
 			// if target is nulled, and it is close enough to target
 			// then lock the target without path finding
 			this.target = this.lockOnTarget.pos;
@@ -345,17 +353,61 @@ Flocker.prototype.setLockOnTarget = function(obj, map) {
 	var row = Math.floor(obj.pos.y/map.size);
 	var col = Math.floor(obj.pos.x/map.size);
 
+	var choices = [];
+
 	if (!obj.MOVING_TARGET) {
-		row = obj.row+Math.floor((obj.size/map.size)/2);
-		col = obj.col+Math.floor((obj.size/map.size)/2);
+		var size = Math.floor((obj.size/map.size));
+
+		// set general target row & col
+		row = obj.row+Math.floor(size/2);
+		col = obj.col+Math.floor(size/2);
+
+
+
+		if (obj.row-1 >= 0) {
+			for(var i=0;i<size;++i){
+				choices.push([obj.row-1, obj.col+i]);
+			}
+		}
+		if (obj.col-1 >= 0) {
+			for(var i=0;i<size;++i){
+				choices.push([obj.row+i, obj.col-1]);
+			}
+		}
+		if (obj.row+size < map.height) {
+			for(var i=0;i<size;++i){
+				choices.push([obj.row+size, obj.col+i]);
+			}
+		}
+		if (obj.col+size < map.width) {
+			for(var i=0;i<size;++i){
+				choices.push([obj.row+i, obj.col+size]);
+			}
+		}
 	} 
 
-	var p = findPath(curpos, [row, col], map);
+	
+
+	var p = findPath(curpos, [row, col], map, choices);
 	var cp = transformPathToVec2D(p, map);
 	cp[0] = obj.pos;
 	cp[cp.length-1] = this.pos;
 	this.setPath(cp);
-	return p.length > 0 && Math.abs(row - p[0][0]) + Math.abs(col-p[0][1]) <= 1;
+	
+
+	var reachable = p.length > 0 && Math.abs(row - p[0][0]) + Math.abs(col-p[0][1]) <= 1;
+
+	if (!obj.MOVING_TARGET && p.length) {
+		var size = Math.floor((obj.size/map.size));
+		for (var i = 0; i < choices.length; ++i) {
+			if (Math.abs(choices[i][0]-p[0][0])+Math.abs(choices[i][1]-p[0][1])<=1) {
+				reachable = true;
+				break;
+			}
+		}
+	}
+
+	return reachable;
 }
 
 
@@ -464,8 +516,8 @@ FlockPrite.prototype.render = function(g) {
 	g.restore();
 }
 
-FlockPrite.prototype.integrate = function() {
-	Flocker.prototype.integrate.call(this);
+FlockPrite.prototype.integrate = function(map) {
+	Flocker.prototype.integrate.call(this, map);
 
 	if (this.target == null && this.state != this.ATTACKING && this.state != this.EATING) {
 		this.state = this.STANDBY;

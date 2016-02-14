@@ -11,6 +11,7 @@ function Pig(pos, team) {
 	this.sprites[this.ATTACKING].autoReset = false;
 	this.team = team;
 	this.healthPoints = this.maxHealthPoints = 200;
+	this.strength = 30;
 }
 
 Pig.prototype = Object.create(FlockPrite.prototype);
@@ -28,18 +29,39 @@ Pig.prototype.update = function(flock, map) {
 }
 
 
+function Boar(pos, team) {
+	FlockPrite.call(this, 100, pos, 32);
+	this.setSprite(this.STANDBY, new Sprite(asset.images["asset/boar_standby.png"], 0, 0, 128, 128, 4, 20));
+	this.setSprite(this.MOVING, new Sprite(asset.images["asset/boar_running.png"], 0, 0, 128, 128, 6, 12));
+	this.setSprite(this.ATTACKING, new Sprite(asset.images["asset/boar_angry.png"], 0, 0, 128, 128, 3, 20));
+	this.setSprite(this.EATING, new Sprite(asset.images["asset/boar_eating.png"], 0, 0, 128, 128, 2, 30));
+	this.setSprite(this.DEAD, new Sprite(asset.images["asset/boar_death.png"], 0, 0, 128, 128, 1, 100));
+	this.sprites[this.ATTACKING].autoReset = false;
+	this.team = team;
+	this.healthPoints = this.maxHealthPoints = 800;
+	this.strength = 100;
+	this.ATTACK_DELAY = 60;
+}
+
+Boar.prototype = Object.create(Pig.prototype);
+
+
+
 function Tower(row, col, team) {
-	Building.call(this, 128, 400);
+	Building.call(this, 128, 640);
 	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/tower.png"], 0, 0, 128, 128, 2, 25));
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/tower_death.png"], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
 	this.type = this.ATTACK_TYPE;
-	this.attackRadius = 250;
+	this.attackRadius = 300;
 	this.ATTACK_DELAY = 200;
+	this.healthPoints = this.maxHealthPoints = 500;
 	this.strength = 80;
 	this.team = team;
 	this.MAX_INTERACTION = 12;
+
+	this.weapon = Arrow;
 }
 
 Tower.prototype = Object.create(Building.prototype);
@@ -56,15 +78,35 @@ Tower.prototype.update = function(flock, map) {
 		if (!flock[i].isAlive) continue;
 		if (flock[i].team == this.team) continue;
 		if (flock[i].pos.minus(this.pos).length() <= this.attackRadius) {
-			gameState.arrows.push(new Arrow(this, flock[i], this.strength));
+			gameState.arrows.push(new this.weapon(this, flock[i], this.strength));
 			return;
 		}
 	}
 }
 
 
+function Castle(row, col, team) {
+	Building.call(this, 128, 640);
+	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/castle.png"], 0, 0, 128, 128, 2, 25));
+	this.setSprite(this.DEAD, new Sprite(asset.images["asset/castle_death.png"], 0, 0, 128, 128, 1, 100));
+	registerBuildingToMap(this, gameState.map, row, col);
+
+	this.type = this.ATTACK_TYPE;
+	this.attackRadius = 400;
+	this.ATTACK_DELAY = 120;
+	this.strength = 250;
+	this.healthPoints = this.maxHealthPoints = 1800;
+	this.team = team;
+	this.MAX_INTERACTION = 12;
+
+	this.weapon = Javelin;
+}
+
+Castle.prototype = Object.create(Tower.prototype);
+
+
 function Farm(row, col, team) {
-	Building.call(this, 64, 200);
+	Building.call(this, 64, 128);
 
 	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/rice_field.png"], 0, 0, 128, 128, 6, 200));
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/rice_field_death.png"], 0, 0, 128, 128, 1, 100));
@@ -87,7 +129,7 @@ Farm.prototype = Object.create(Building.prototype);
 
 
 function Fence(row, col, team) {
-	Building.call(this, 64, 100);
+	Building.call(this, 64, 76);
 	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/fence.png"], 0, 0, 128, 128, 1, 100));
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/fence_death.png"], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
@@ -103,6 +145,24 @@ function Fence(row, col, team) {
 
 Fence.prototype = Object.create(Building.prototype);
 
+
+
+function SuperFence(row, col, team) {
+	Building.call(this, 64, 76);
+	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/super_fence.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images["asset/fence_death.png"], 0, 0, 128, 128, 1, 100));
+	registerBuildingToMap(this, gameState.map, row, col);
+
+	this.team = team;
+	this.type = this.ATTACK_TYPE;
+	this.activity = this.PASSIVE;
+	this.SHOW_HEALTHBAR = false;
+	this.PERSISTENCE = 20;
+	this.healthPoints = this.maxHealthPoints = 400;
+	this.MAX_INTERACTION = 2;
+}
+
+SuperFence.prototype = Object.create(Fence.prototype);
 
 
 function PigRanch(row, col, team) {
@@ -121,6 +181,8 @@ function PigRanch(row, col, team) {
 	this.lastProduce = 0;
 	this.PRODUCE_DELAY = 600;
 	this.pigsPerProduction = 1;
+
+	this.product = Pig;
 }
 
 PigRanch.prototype = Object.create(Building.prototype);
@@ -140,9 +202,10 @@ PigRanch.prototype.update = function(flock, map) {
 	for (var i = 0; i < exitPoints.length; ++i) {
 		var r = exitPoints[i][0] + this.row;
 		var c = exitPoints[i][1] + this.col;
+		if (r < 0 || c < 0 || r >= gameState.map.height || c >= gameState.map.width) continue;
 		if (gameState.map.data[r*gameState.map.width+c] == 1) {
 			for (var j = 0; j < this.pigsPerProduction; ++j) {
-				gameState.flocks.push(new Pig(new Vec2((c+0.5)*gameState.map.size, (r+0.5)*gameState.map.size), this.team));
+				gameState.flocks.push(new this.product(new Vec2((c+0.5)*gameState.map.size, (r+0.5)*gameState.map.size), this.team));
 			}
 			return;
 		}
@@ -151,7 +214,26 @@ PigRanch.prototype.update = function(flock, map) {
 
 }
 
+function PigHQ(row, col, team) {
+	Building.call(this, 128, 300);
+	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/pig_hq.png"], 0, 0, 128, 128, 2, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images["asset/pig_hq_death.png"], 0, 0, 128, 128, 1, 100));
+	registerBuildingToMap(this, gameState.map, row, col);
 
+
+	this.team = team;
+	this.type = this.ATTACK_TYPE;
+	this.healthPoints = this.maxHealthPoints = 1250;
+	this.MAX_INTERACTION = 8;
+
+	this.lastProduce = 0;
+	this.PRODUCE_DELAY = 600;
+	this.pigsPerProduction = 1;
+
+	this.product = Boar;
+}
+
+PigHQ.prototype = Object.create(PigRanch.prototype);
 
 function Throne(row, col, team) {
 	Building.call(this, 128, 1000);
@@ -209,6 +291,21 @@ Arrow.prototype.update = function() {
 
 
 
+function Javelin(owner, target, damage) {
+	FlockPrite.call(this, 0, owner.pos.copy(), 45);
+	this.setSprite(this.STANDBY, new Sprite(asset.images["asset/javelin.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images["asset/javelin_death.png"], 0, 0, 128, 128, 1, 100));
+	this.target = target;
+	this.owner = owner;
+	this.startPoint = owner.pos.copy();
+	this.destination = target.pos.copy();
+	this.damage = damage;
+	this.orientation = getAngle(target.pos.minus(owner.pos));
+	this.updateCount = 0;
+	this.maxDelta = 40;
+}
+
+Javelin.prototype = Object.create(Arrow.prototype);
 
 
 
