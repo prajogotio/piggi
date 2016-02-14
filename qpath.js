@@ -7,11 +7,12 @@ var map = {
 	height:0
 }
 
-function findPath(start, target, map) {
+function findPath(start, target, map, otherTargets) {
 	// grid map
 	// A* Search 
 	if (start[0] < 0 || start[1] < 0 || start[0] >= map.height || start[1] >= map.width
 	|| target[0] < 0 || target[1] < 0 || target[0] >= map.height || target[1] >= map.width) return [];
+	
 	var mark = new Int32Array(map.data.length);
 	var par = new Int32Array(map.data.length).fill(-1);
 	var lsf = function(L, R) {
@@ -53,6 +54,14 @@ function findPath(start, target, map) {
 		if (row==target[0] && col==target[1]) {
 			loc = idx;
 			break;
+		}
+		if (otherTargets) {
+			for (var i = 0; i < otherTargets; ++i) {
+				if (otherTargets[i][0] == row && otherTargets[1] == col) {
+					loc = idx;
+					break;
+				}
+			}
 		}
 		insertPQ(row, col, -1, 0, dist);
 		insertPQ(row, col, 1, 0, dist);

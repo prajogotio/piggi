@@ -85,7 +85,10 @@ function allAssetsLoadedHandler() {
 }
 
 function startGame() {
+	// example game
 	gameState = createNewGame(20, 32, "asset/grass01.jpg");
+	gameState.thrones.push(new Throne(0, 0, 0), new Throne(30, 18, 1));
+
 	registerEventHandler();
 	gameState.scheduler = setInterval(function() {
 		handleLocalCommand();
@@ -106,6 +109,8 @@ function createNewGame(mapWidth, mapHeight, mapURI) {
 			imgBuffer : asset.images[mapURI],
 			size : 64,
 		},
+		thrones : [],
+
 		deadflocks : [],
 		deadarrows : [],
 		deadbuildings : [],
@@ -168,7 +173,7 @@ function renderGame() {
 	
 
 	// render the rest
-	var all = [gameState.deadbuildings, gameState.buildings, gameState.deadflocks, gameState.deadarrows, gameState.flocks, gameState.arrows];
+	var all = [gameState.thrones, gameState.deadbuildings, gameState.buildings, gameState.deadflocks, gameState.deadarrows, gameState.flocks, gameState.arrows];
 
 	for(var i = 0; i < all.length; ++i) {
 		for(var j = 0; j < all[i].length; ++j){
@@ -362,13 +367,9 @@ function registerEventHandler() {
 	function keyDownHandler(e) {
 		var x = clientState.mouse[0]+clientState.camera[0];
 		var y = clientState.mouse[1]+clientState.camera[1];
-		if (e.which == 65) {
-			// HELPER, REMOVE LATER
-			// generate pig
-			gameState.flocks.push(new Pig(new Vec2(x,y), clientState.team));
-		}
+		
 
-		else if (e.which == 84) {
+		if (e.which == 84) {
 			// 'T'
 			// generate tower
 			clientState.state = 'BUILDING';
@@ -392,10 +393,26 @@ function registerEventHandler() {
 			clientState.buildingSize = 1;
 		}
 
+		else if (e.which == 82) {
+			// 'R'
+			// generate ranch
+			clientState.state = 'BUILDING';
+			clientState.currentCommand = COMMAND.BUILD_PIG_RANCH;
+			clientState.buildingSize = 2;
+		}
+
 		else if (e.which == 81) {
 			// 'Q'
 			clientState.state = 'NONE';
 		}
+
+
+		else if (e.which == 65) {
+			// HELPER, REMOVE LATER
+			// generate pig
+			gameState.flocks.push(new Pig(new Vec2(x,y), clientState.team));
+		}
+
 
 		else if (e.which == 13) {
 			// HELPER, REMOVE LATER
@@ -452,6 +469,9 @@ function executeCommand(c) {
 	}
 	else if (type == COMMAND.BUILD_FENCE) {
 		gameState.buildings.push(new Fence(params[0], params[1], params[2]));
+	}
+	else if (type == COMMAND.BUILD_PIG_RANCH) {
+		gameState.buildings.push(new PigRanch(params[0], params[1], params[2]));
 	}
 }
 

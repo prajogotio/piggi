@@ -13,8 +13,8 @@ function Flocker(mass, pos, radius) {
 	this.MAXIMUM_SPEED = 1.5;
 	this.AVOIDANCE_SPEED = 1.1;
 	this.TARGET_RADIUS = 64;
-	this.steeringEffect = 1.3;
-	this.attackRadius = 16;
+	this.steeringEffect = 2;
+	this.attackRadius = 32;
 	this.MOVING_TARGET = true;
 
 	// locomotion
@@ -33,7 +33,7 @@ function Flocker(mass, pos, radius) {
 	this.state = this.STANDBY;
 
 	// AI control
-	this.ENVIRONMENT_CHECK_DELAY = 100;
+	this.ENVIRONMENT_CHECK_DELAY = 60;
 	this.lastEnvironmentCheck = -10;
 	this.updateCount = 0;
 
@@ -125,7 +125,7 @@ Flocker.prototype.update = function(flock, map) {
 				diff = new Vec2(1, j);
 				diff.normalize();
 			}
-			var flee = upperbound(diff, this.MAXIMUM_SPEED * seperation);
+			var flee = upperbound(diff, this.AVOIDANCE_SPEED * seperation);
 			this.force = this.force.plus(flee);
 		}
 	}
@@ -205,6 +205,11 @@ Flocker.prototype.checkSurrounding = function(flock, map) {
 	}
 	this.lastEnvironmentCheck = this.updateCount;
 
+	// check if path need to be updated
+	if (this.lockOnTarget) {
+		this.setLockOnTarget(this.lockOnTarget, map);
+	}
+
 
 	// find other pig to attack, closest one
 	var dist = 1e9;
@@ -222,7 +227,7 @@ Flocker.prototype.checkSurrounding = function(flock, map) {
 	}
 
 	if (k!=-1){
-		if (this.lockOnTarget && !this.lockOnTarget.MOVING_TARGET) return;
+		//if (this.lockOnTarget && !this.lockOnTarget.MOVING_TARGET) return;
 		var reachable = this.setLockOnTarget(flock[k], map);
 		if (reachable) return;
 	}
@@ -259,16 +264,16 @@ Flocker.prototype.checkSurrounding = function(flock, map) {
 		if (map.entry[idx]) {
 			var building = map.entry[idx];
 			if (building.canInteract(this)) {
-				this.setLockOnTarget(building, map);
-				break;
+				var reachable = this.setLockOnTarget(building, map);
+				if (reachable) break;
 			}
 		}
 
-		for(var dr=-1;dr<=1;++dr){
-			for(var dc=-1;dc<=1;++dc){
-				checkThenPush(cur[0]+dr,cur[1]+dc);
-			}
-		}
+
+		checkThenPush(cur[0]-1,cur[1]);
+		checkThenPush(cur[0]+1,cur[1]);
+		checkThenPush(cur[0],cur[1]+1);
+		checkThenPush(cur[0],cur[1]-1);
 	}
 
 }
@@ -283,7 +288,8 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 			this.provoked = false;
 			return;
 		}
-		if (this.lockOnTarget.pos.minus(this.pos).length() <= this.radius + this.lockOnTarget.radius + this.attackRadius) {
+		var distToTarget = this.lockOnTarget.pos.minus(this.pos).length();
+		if (distToTarget <= this.radius + this.lockOnTarget.radius + this.attackRadius) {
 			// close enough, attack! (or eat)
 			this.targetStack = [];
 			this.target = null;
@@ -308,10 +314,11 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 					this.lastAttack = this.updateCount;
 				}
 			}
-		} else if (this.state != this.MOVING && this.state != this.STANDBY) {
-			// if already attacking or eating, chase after the enemy straigth away
+		} else if (!this.target && distToTarget <= map.size) {
+			// if target is nulled, and it is close enough to target
+			// then lock the target without path finding
 			this.target = this.lockOnTarget.pos;
-		}
+		} 
 
 		// orientation fix: when locking on a target
 		if (this.state == this.ATTACKING || this.state == this.EATING) {
@@ -348,7 +355,7 @@ Flocker.prototype.setLockOnTarget = function(obj, map) {
 	cp[0] = obj.pos;
 	cp[cp.length-1] = this.pos;
 	this.setPath(cp);
-	return p.length > 0 && row == p[0][1] && col == p[0][0];
+	return p.length > 0 && Math.abs(row - p[0][0]) + Math.abs(col-p[0][1]) <= 1;
 }
 
 
@@ -358,6 +365,7 @@ Flocker.prototype.setState = function(state) {
 
 Flocker.prototype.receiveDamage = function(dmg) {
 	if (!this.isAlive) return;
+	this.provoked = true;
 	this.healthPoints -= dmg;
 	if (this.healthPoints <= 0) {
 		this.healthPoints = 0;

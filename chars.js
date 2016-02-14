@@ -10,10 +10,22 @@ function Pig(pos, team) {
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/pig_death.png"], 0, 0, 128, 128, 1, 100));
 	this.sprites[this.ATTACKING].autoReset = false;
 	this.team = team;
+	this.healthPoints = this.maxHealthPoints = 200;
 }
 
 Pig.prototype = Object.create(FlockPrite.prototype);
 
+Pig.prototype.update = function(flock, map) {
+	FlockPrite.prototype.update.call(this, flock, map);
+	if (!this.isAlive) {
+		return;
+	}
+	if (this.lockOnTarget == null) {
+		var enemy = this.team+1;
+		enemy %= 2;
+		this.setLockOnTarget(gameState.thrones[enemy], map);
+	}
+}
 
 
 function Tower(row, col, team) {
@@ -23,10 +35,11 @@ function Tower(row, col, team) {
 	registerBuildingToMap(this, gameState.map, row, col);
 
 	this.type = this.ATTACK_TYPE;
-	this.attackRadius = 500;
-	this.ATTACK_DELAY = 130;
+	this.attackRadius = 250;
+	this.ATTACK_DELAY = 200;
 	this.strength = 80;
 	this.team = team;
+	this.MAX_INTERACTION = 12;
 }
 
 Tower.prototype = Object.create(Building.prototype);
@@ -65,7 +78,7 @@ function Farm(row, col, team) {
 	this.SHOW_HEALTHBAR = false;
 	this.healthPoints = 200;
 	this.PERSISTENCE = 300;
-	this.MAX_INTERACTION = 1;
+	this.MAX_INTERACTION = 2;
 	this.radius = 0;
 }
 
@@ -89,6 +102,73 @@ function Fence(row, col, team) {
 }
 
 Fence.prototype = Object.create(Building.prototype);
+
+
+
+function PigRanch(row, col, team) {
+	Building.call(this, 128, 300);
+	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/pig_ranch.png"], 0, 0, 128, 128, 2, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images["asset/pig_ranch_death.png"], 0, 0, 128, 128, 1, 100));
+	registerBuildingToMap(this, gameState.map, row, col);
+
+
+	this.team = team;
+	this.type = this.ATTACK_TYPE;
+	this.healthPoints = 350;
+	this.maxHealthPoints = 350;
+	this.MAX_INTERACTION = 8;
+
+	this.lastProduce = 0;
+	this.PRODUCE_DELAY = 600;
+	this.pigsPerProduction = 1;
+}
+
+PigRanch.prototype = Object.create(Building.prototype);
+
+PigRanch.prototype.update = function(flock, map) {
+	Building.prototype.update.call(this, flock, map);
+	if (!this.isAlive) return;
+	if (this.updateCount - this.lastProduce <= this.PRODUCE_DELAY) {
+		return;
+	}
+	this.lastProduce = this.updateCount;
+
+	var exitPoints = [[2, 0], [2, 1], 
+					  [-1, 0], [-1, 1],
+					  [0, -1], [1, -1],
+					  [0, 2], [1, 2]];
+	for (var i = 0; i < exitPoints.length; ++i) {
+		var r = exitPoints[i][0] + this.row;
+		var c = exitPoints[i][1] + this.col;
+		if (gameState.map.data[r*gameState.map.width+c] == 1) {
+			for (var j = 0; j < this.pigsPerProduction; ++j) {
+				gameState.flocks.push(new Pig(new Vec2((c+0.5)*gameState.map.size, (r+0.5)*gameState.map.size), this.team));
+			}
+			return;
+		}
+	}
+
+
+}
+
+
+
+function Throne(row, col, team) {
+	Building.call(this, 128, 1000);
+	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/throne.png"], 0, 0, 128, 128, 8, 40));
+	this.setSprite(this.DEAD, new Sprite(asset.images["asset/throne.png"], 0, 0, 128, 128, 1, 100));
+	registerBuildingToMap(this, gameState.map, row, col);
+
+	this.team = team;
+	this.type = this.ATTACK_TYPE;
+	this.SHOW_HEALTHBAR = true;
+	this.PERSISTENCE = 700;
+	this.healthPoints = this.maxHealthPoints = 10000;
+	this.MAX_INTERACTION = 10000;
+}
+
+Throne.prototype = Object.create(Building.prototype);
+
 
 
 function Arrow(owner, target, damage) {
@@ -142,19 +222,3 @@ Arrow.prototype.update = function() {
 
 
 
-
-function generateBlock() {
-	var t = new Building(64, 0);
-	t.setSprite(t.NORMAL, new Sprite(asset.images["asset/block.png"], 0, 0, 128, 128, 1, 1000));
-	t.HAS_HEALTHPOINT = false;
-	return t;
-}
-
-
-function generatePigRanch() {
-	var t = new Building(128, 400);
-	t.setSprite(t.NORMAL, new Sprite(asset.images["asset/pig_ranch.png"], 0, 0, 128, 128, 2, 100));
-	t.team = 1;
-	t.type = t.ATTACK_TYPE;
-	return t;
-}
