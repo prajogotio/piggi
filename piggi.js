@@ -81,10 +81,10 @@ var PRICES = {
 	'BUILD_FENCE' : 1,
 	'UPGRADE_TOWER' : 600,
 	'UPGRADE_PIG_RANCH' : 600,
-	'BUILD_CASTLE' : 100,
+	'BUILD_CASTLE' : 240,
 	'BUILD_GARDEN' : 35,
 	'BUILD_PIG_HQ' : 220,
-	'BUILD_WALL' : 20,
+	'BUILD_WALL' : 40,
 }
 
 var CONSTANTS = {
@@ -114,10 +114,24 @@ function initializeAsset() {
 	for (var i = 0; i < asset.assetImageList.length; ++i) {
 		var img = new Image();
 		asset.images[asset.assetImageList[i]] = img;
-		img.onload = function() {
-			asset.loadedAssetCount++;
-			assetProgressHandler();
-		}
+		img.onload = (function(name) {
+			return function() {
+				asset.loadedAssetCount++;
+				// create an overlay for team B
+				var b = document.createElement('canvas');
+				b.width=asset.images[name].width;
+				b.height=asset.images[name].height;
+				var bg = b.getContext('2d');
+				bg.drawImage(asset.images[name], 0, 0, asset.images[name].width, asset.images[name].height, 0, 0, asset.images[name].width, asset.images[name].height);
+				bg.save();
+				bg.globalCompositeOperation = "source-atop";
+				bg.fillStyle = "rgba(0,0,255,0.2)";
+				bg.fillRect(0,0,b.width,b.height);
+				bg.restore();
+				asset.images[name+'/b'] = b;
+				assetProgressHandler();
+			}
+		})(asset.assetImageList[i]);
 		img.src = asset.assetImageList[i];
 	}
 }

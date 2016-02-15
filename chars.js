@@ -276,7 +276,7 @@ function PigHQ(row, col, team) {
 	this.pigsPerProduction = 1;
 
 	this.product = Boar;
-	this.productPrice = 50;
+	this.productPrice = 200;
 }
 
 PigHQ.prototype = Object.create(PigRanch.prototype);
