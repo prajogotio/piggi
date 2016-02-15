@@ -123,9 +123,9 @@ function Farm(row, col, team) {
 	this.MAX_INTERACTION = 2;
 	this.radius = 0;
 
-	this.coinsToHarvest = 2;
+	this.coinsToHarvest = 1;
 	this.lastProduce = 0;
-	this.PRODUCE_DELAY = 600;
+	this.PRODUCE_DELAY = 250;
 }
 
 Farm.prototype = Object.create(Building.prototype);
@@ -157,8 +157,8 @@ function Garden(row, col, team) {
 	this.MAX_INTERACTION = 2;
 	this.radius = 0;
 
-	this.coinsToHarvest = 5;
-	this.PRODUCE_DELAY = 300;
+	this.coinsToHarvest = 3;
+	this.PRODUCE_DELAY = 250;
 }
 
 Garden.prototype = Object.create(Farm.prototype);
@@ -225,7 +225,7 @@ function PigRanch(row, col, team) {
 	this.pigsPerProduction = 1;
 
 	this.product = Pig;
-	this.productPrice = 10;
+	this.productPrice = 36;
 }
 
 PigRanch.prototype = Object.create(Building.prototype);
@@ -276,7 +276,7 @@ function PigHQ(row, col, team) {
 	this.pigsPerProduction = 1;
 
 	this.product = Boar;
-	this.productPrice = 18;
+	this.productPrice = 50;
 }
 
 PigHQ.prototype = Object.create(PigRanch.prototype);

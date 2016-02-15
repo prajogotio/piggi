@@ -13,7 +13,7 @@ function Flocker(mass, pos, radius) {
 	this.RADIUS_OF_ACCEPTANCE = 4;
 	this.MAXIMUM_SPEED = 1.5;
 	this.AVOIDANCE_SPEED = 1.5;
-	this.TARGET_RADIUS = 32;
+	this.TARGET_RADIUS = 64;
 	this.steeringEffect = 2.4;
 	this.attackRadius = 32;
 	this.MOVING_TARGET = true;
@@ -306,7 +306,12 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 		if (distToTarget <= this.radius + this.lockOnTarget.radius + this.attackRadius) {
 			// close enough, attack! (or eat)
 			this.targetStack = [];
+
 			this.target = this.lockOnTarget.pos;
+			if (this.lockOnTarget.MOVING_TARGET) {
+				this.target = null;
+			}
+
 			this.lockOnTarget.getInteractionType(this);
 
 			// attack events
@@ -328,10 +333,15 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 					this.lastAttack = this.updateCount;
 				}
 			}
-		} else if (!this.target && distToTarget < 2*map.size) {
-			// if target is nulled, and it is close enough to target
-			// then lock the target without path finding
-			this.target = this.lockOnTarget.pos;
+		} else if (!this.target ) {
+			if (distToTarget < 2*map.size){
+				// if target is nulled, and it is close enough to target
+				// then lock the target without path finding
+				this.target = this.lockOnTarget.pos;
+			} else {
+				// find
+				this.setLockOnTarget(this.lockOnTarget, map, true);
+			}
 		} 
 
 		// orientation fix: when locking on a target
@@ -342,9 +352,9 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 }
 
 
-Flocker.prototype.setLockOnTarget = function(obj, map) {
+Flocker.prototype.setLockOnTarget = function(obj, map, forceRepath) {
 	if (!obj.isAlive) return false;
-	if (obj == this.lockOnTarget) {
+	if (obj == this.lockOnTarget && !forceRepath) {
 		// if it is not moving target, and map has not changed
 		// continue with previous path
 		if (map.lastUpdated == this.pathTimestamp) return true;

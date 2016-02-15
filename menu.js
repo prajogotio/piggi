@@ -65,7 +65,19 @@ MenuBar.prototype.render = function(g) {
 	}
 
 	// coins
-
+	var coinSize = 40;
+	var cW = coinSize+coinSize*0.5*4+4+4;
+	var cH = coinSize+4;
+	g.translate(-cW, this.height-cH);
+	g.fillRect(0,0,cW,cH);
+	g.drawImage(asset.images['asset/pig_coin.png'],0,0,128,128,2,2,coinSize,coinSize);
+	g.translate(coinSize+4, 0);
+	g.fillStyle = "rgba(255,245,200,0.5)";
+	g.fillRect(1,3,cW-coinSize-4-2,cH-6);
+	g.translate(4,4);
+	var c = generateNumber(gameState.coins[clientState.team], 32);
+	g.translate(cW-coinSize-8-c.width-coinSize*0.5/2,0);
+	c.render(g);
 	g.restore();
 }	
 
@@ -162,6 +174,25 @@ PriceMenuIcon.prototype.onclick = function() {
 		issueCommand(COMMAND.BUY, [clientState.team, COMMAND[this.commandType], PRICES[this.commandType], this.buildingSize]);
 		clientState.menuBar.deselect.lockedCoins = PRICES[this.commandType];
 	}
+}
+
+PriceMenuIcon.prototype.render = function(g) {
+	MenuIcon.prototype.render.call(this, g);
+	this.renderPrice(g, PRICES[this.commandType]);
+}
+
+PriceMenuIcon.prototype.renderPrice = function(g, price) {
+	g.save();
+	g.translate(this.x-this.width/2,this.y-this.height/2);
+	var c = generateNumber(price, 14);
+	g.translate(this.width-c.width-2, this.height-c.height-2);
+	g.fillStyle = "rgba(0,0,0,0.5)";
+	g.fillRect(0,0,c.width,c.height);
+	c.render(g);
+	g.translate(-16,0);
+	g.fillRect(0,0,16,14);
+	g.drawImage(asset.images["asset/pig_coin.png"],0,0,128,128,0,0,14,14);
+	g.restore();
 }
 
 
@@ -322,4 +353,26 @@ DeselectIcon.prototype.onclick = function() {
 }
 DeselectIcon.prototype.update = function() {
 
+}
+
+
+
+function generateNumber(x, size) {
+	var d = [];
+	while (x>0) {
+		d.push(x%10);
+		x = Math.floor(x/10);
+	}
+	if(d.length == 0) d = [0];
+	d.reverse();
+	var dW = size*0.5;
+	return {
+		render : function(g) {
+			for(var i=0;i<d.length;++i){
+				g.drawImage(asset.images["asset/numbers.png"], d[i]*128, 0, 128, 128, i*dW-(size-dW)/2, 0, size, size);
+			}
+		},
+		width : dW*d.length,
+		height : size,
+	}
 }

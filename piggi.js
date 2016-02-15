@@ -75,16 +75,16 @@ var COMMAND = {
 }
 
 var PRICES = {
-	'BUILD_TOWER' : 30,
+	'BUILD_TOWER' : 50,
 	'BUILD_FARM' : 5,
-	'BUILD_PIG_RANCH' : 50,
+	'BUILD_PIG_RANCH' : 30,
 	'BUILD_FENCE' : 1,
 	'UPGRADE_TOWER' : 600,
 	'UPGRADE_PIG_RANCH' : 600,
-	'BUILD_CASTLE' : 80,
-	'BUILD_GARDEN' : 15,
-	'BUILD_PIG_HQ' : 150,
-	'BUILD_WALL' : 10,
+	'BUILD_CASTLE' : 100,
+	'BUILD_GARDEN' : 35,
+	'BUILD_PIG_HQ' : 220,
+	'BUILD_WALL' : 20,
 }
 
 var CONSTANTS = {
@@ -461,21 +461,32 @@ function registerGameEventHandler() {
 		// screen x, y
 		var sx = clientState.mouse[0];
 		var sy = clientState.mouse[1];
-
-		// trap event if click is on menubar
-		if (clientState.menuBar.containsPoint(sx, sy)) {
-			clientState.menuBar.onclick(sx, sy);
-			return;
-		}
-
-
-		if (clientState.state == 'BUILDING') {
-			var pos = computeMapLocation(x, y);
-			if (!isLandOccupied(pos[0], pos[1], clientState.buildingSize)) {
-				clientState.state = 'NONE';
-				issueCommand(clientState.currentCommand, [pos[0], pos[1], clientState.team]);
+		if (e.buttons == 1) {
+			// LEFTCLICK
+			
+			// trap event if click is on menubar
+			if (clientState.menuBar.containsPoint(sx, sy)) {
+				clientState.menuBar.onclick(sx, sy);
+				return;
 			}
-			clientState.menuBar.reset();
+
+
+			if (clientState.state == 'BUILDING') {
+				// commit building
+				var pos = computeMapLocation(x, y);
+				if (!isLandOccupied(pos[0], pos[1], clientState.buildingSize)) {
+					clientState.state = 'NONE';
+					issueCommand(clientState.currentCommand, [pos[0], pos[1], clientState.team]);
+				}
+				clientState.menuBar.reset();
+			}
+		}
+		else if (e.buttons == 2) {
+			// RIGHT CLICK
+			if (clientState.state == 'BUILDING') {
+				// cancel 
+				clientState.menuBar.deselect.onclick();
+			}
 		}
 	}
 
