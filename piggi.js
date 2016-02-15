@@ -37,6 +37,19 @@ var asset = {
 		"asset/throne.png",
 		"asset/mouse.png",
 		"asset/mouse_shadow.png",
+		"asset/tower_icon.png",
+		"asset/ranch_icon.png",
+		"asset/farm_icon.png",
+		"asset/fence_icon.png",
+		"asset/upgrade_icon.png",
+		"asset/castle_icon.png",
+		"asset/pighq_icon.png",
+		"asset/wall_icon.png",
+		"asset/farm_icon.png",
+		"asset/garden_icon.png",
+		"asset/deselect_icon.png",
+		"asset/pig_coin.png",
+		"asset/numbers.png",
 		"asset/grass01.jpg", 
 	],
 	images : {},
@@ -53,6 +66,29 @@ var COMMAND = {
 	'BUILD_FENCE' : 3,
 	'UPGRADE_TOWER' : 4,
 	'UPGRADE_PIG_RANCH' : 5,
+	'BUY' : 6,
+	'DESELECT': 7,
+	'BUILD_CASTLE' : 8,
+	'BUILD_GARDEN' : 9,
+	'BUILD_PIG_HQ' : 10,
+	'BUILD_WALL' : 11,
+}
+
+var PRICES = {
+	'BUILD_TOWER' : 30,
+	'BUILD_FARM' : 5,
+	'BUILD_PIG_RANCH' : 50,
+	'BUILD_FENCE' : 1,
+	'UPGRADE_TOWER' : 600,
+	'UPGRADE_PIG_RANCH' : 600,
+	'BUILD_CASTLE' : 80,
+	'BUILD_GARDEN' : 15,
+	'BUILD_PIG_HQ' : 150,
+	'BUILD_WALL' : 10,
+}
+
+var CONSTANTS = {
+	BACKGROUND_MONEY_RATE : 300, // timesteps per 1 coin
 }
 
 var gameState = {
@@ -64,6 +100,8 @@ var clientState = {
 	mouse : [0, 0],
 	mouseImg : null,
 	team : 0,
+	menuBar : null,
+	gameEventHandlerResetFunction : null,
 }
 
 function initializeApp() {
@@ -96,6 +134,8 @@ function allAssetsLoadedHandler() {
 	clientState.mouse[0] = clientState.canvas.width/2;
 	clientState.mouse[1] = clientState.canvas.height/2;
 
+	registerAppEventHandler();
+
 	startGame();
 }
 
@@ -104,14 +144,21 @@ function startGame() {
 	gameState = createNewGame(20, 32, "asset/grass01.jpg");
 	gameState.thrones.push(new Throne(0, 0, 0), new Throne(30, 18, 1));
 
-	registerEventHandler();
+	clientState.menuBar = new MenuBar();
+
+	clientState.gameEventHandlerResetFunction = registerGameEventHandler();
 	gameState.scheduler = setInterval(function() {
+		// game routine
 		handleLocalCommand();
 		updateGame();
 		updateCamera();
 		renderGame();
-		gameState.timestep++;
+
+		renderMenuBar();
+		drawMouse();
+
 	}, 1000/60);
+
 }
 
 function createNewGame(mapWidth, mapHeight, mapURI) {
@@ -125,9 +172,7 @@ function createNewGame(mapWidth, mapHeight, mapURI) {
 			size : 64,
 			lastUpdated : 0,
 		},
-		thrones : [],
-		ranchTier : [1, 1],
-		towerTier : [1, 1],
+		
 
 		deadflocks : [],
 		deadarrows : [],
@@ -139,6 +184,12 @@ function createNewGame(mapWidth, mapHeight, mapURI) {
 
 		timestep : 0,
 		localCommandLog : [],
+
+		// team information
+		thrones : [],
+		ranchTier : [1, 1],
+		towerTier : [1, 1],
+		coins : [10, 10],
 	}
 	return state;
 }
@@ -215,10 +266,10 @@ function renderGame() {
 
 	stateDependentRendering(g);
 
-	drawMouse(g);
 }
 
-function drawMouse(g) {
+function drawMouse() {
+	var g = clientState.g;
 	g.save();
 	g.translate(clientState.mouse[0], clientState.mouse[1]);
 	g.save();
@@ -241,6 +292,11 @@ function stateDependentRendering(g) {
 }
 
 function updateGame() {
+	if (gameState.timestep % CONSTANTS.BACKGROUND_MONEY_RATE == 0) {
+		for (var i = 0; i < gameState.coins.length; ++i) {
+			gameState.coins[i] += 1;
+		}
+	}
 
 	var all = [gameState.deadbuildings, gameState.deadflocks, gameState.deadarrows, gameState.flocks, gameState.buildings, gameState.arrows];
 
@@ -252,6 +308,7 @@ function updateGame() {
 
 	garbageCollection();
 
+	gameState.timestep++;
 }
 
 
@@ -323,13 +380,25 @@ function garbageCollection() {
 }
 
 
-function registerEventHandler() {
+function registerAppEventHandler() {
 	var camera = clientState.camera;
 	var canvas = clientState.canvas;
 	var map = gameState.map;
 
+	document.addEventListener("mousedown", mouseDownCallback);
 
-	canvas.addEventListener("mousedown", function(e) {
+	// Hook pointer lock state change events
+	document.addEventListener('pointerlockchange', changeCallback, false);
+	document.addEventListener('mozpointerlockchange', changeCallback, false);
+	document.addEventListener('webkitpointerlockchange', changeCallback, false);
+
+	function checkIfPointerLocked() {
+		return document.pointerLockElement === canvas ||
+		  document.mozPointerLockElement === canvas ||
+		  document.webkitPointerLockElement === canvas;
+	}
+
+	function changeCallback() {
 		if(!checkIfPointerLocked()){
 			// Pointer Lock
 			canvas.requestPointerLock = canvas.requestPointerLock ||
@@ -338,25 +407,6 @@ function registerEventHandler() {
 			// Ask the browser to lock the pointer
 			canvas.requestPointerLock();
 		}
-		mouseDownCallback(e);
-	});
-
-	document.addEventListener('keydown', function(e) {
-		// Ask the browser to release the pointer
-		// document.exitPointerLock = document.exitPointerLock ||
-		// 		   document.mozExitPointerLock ||
-		// 		   document.webkitExitPointerLock;
-		// document.exitPointerLock();
-		keyDownHandler(e);
-	});
-
-	// Hook pointer lock state change events
-	document.addEventListener('pointerlockchange', changeCallback, false);
-	document.addEventListener('mozpointerlockchange', changeCallback, false);
-	document.addEventListener('webkitpointerlockchange', changeCallback, false);
-
-
-	function changeCallback() {
 		if (checkIfPointerLocked()) {
 		  // Pointer was just locked
 		  // Enable the mousemove listener
@@ -370,6 +420,7 @@ function registerEventHandler() {
 	}
 
 	function moveCallback(e) {
+		
 		var mouse = clientState.mouse;
 		var camera = clientState.camera;
 
@@ -378,18 +429,53 @@ function registerEventHandler() {
 
 		mouse[0] = Math.min(Math.max(0, mouse[0] + movementX*1.2), canvas.width-32);
 		mouse[1] = Math.min(Math.max(0, mouse[1] + movementY*1.2), canvas.height-32);
-		
 	}
 
 	function mouseDownCallback(e) {
+		if(!checkIfPointerLocked()){
+			// Pointer Lock
+			canvas.requestPointerLock = canvas.requestPointerLock ||
+					     canvas.mozRequestPointerLock ||
+					     canvas.webkitRequestPointerLock;
+			// Ask the browser to lock the pointer
+			canvas.requestPointerLock();
+		}
+	}
+
+}
+
+
+function registerGameEventHandler() {
+	var camera = clientState.camera;
+	var canvas = clientState.canvas;
+	var map = gameState.map;
+
+	canvas.addEventListener("mousedown", mouseDownCallback);
+	document.addEventListener('keydown', keyDownHandler);
+	
+	function mouseDownCallback(e) {
+		// world x, y
 		var x = clientState.mouse[0]+clientState.camera[0];
 		var y = clientState.mouse[1]+clientState.camera[1];
+
+		// screen x, y
+		var sx = clientState.mouse[0];
+		var sy = clientState.mouse[1];
+
+		// trap event if click is on menubar
+		if (clientState.menuBar.containsPoint(sx, sy)) {
+			clientState.menuBar.onclick(sx, sy);
+			return;
+		}
+
+
 		if (clientState.state == 'BUILDING') {
 			var pos = computeMapLocation(x, y);
 			if (!isLandOccupied(pos[0], pos[1], clientState.buildingSize)) {
 				clientState.state = 'NONE';
 				issueCommand(clientState.currentCommand, [pos[0], pos[1], clientState.team]);
 			}
+			clientState.menuBar.reset();
 		}
 	}
 
@@ -397,63 +483,74 @@ function registerEventHandler() {
 		var x = clientState.mouse[0]+clientState.camera[0];
 		var y = clientState.mouse[1]+clientState.camera[1];
 		
-		if (clientState.state == 'UPGRADE') {
-			if (e.which == 84) {
-				// 'T'
-				// upgrade tower
-				issueCommand(COMMAND.UPGRADE_TOWER, [clientState.team]);
-				clientState.state = 'NONE';
-			}
-
-			else if (e.which == 82) {
-				// 'R'
-				// upgrade ranch
-				issueCommand(COMMAND.UPGRADE_PIG_RANCH, [clientState.team]);
-				clientState.state = 'NONE';
-			}
-		} else {
-			if (e.which == 84) {
-				// 'T'
-				// generate tower
-				clientState.state = 'BUILDING';
-				clientState.currentCommand = COMMAND.BUILD_TOWER;
-				clientState.buildingSize = 2;
-			}
-
-			else if (e.which == 65) {
-				// 'A'
-				// generate farm
-				clientState.state = 'BUILDING';
-				clientState.currentCommand = COMMAND.BUILD_FARM;
-				clientState.buildingSize = 1;
-			}
-
-			else if (e.which == 70) {
-				// 'F'
-				// generate fence
-				clientState.state = 'BUILDING';
-				clientState.currentCommand = COMMAND.BUILD_FENCE;
-				clientState.buildingSize = 1;
-			}
-
-			else if (e.which == 82) {
-				// 'R'
-				// generate ranch
-				clientState.state = 'BUILDING';
-				clientState.currentCommand = COMMAND.BUILD_PIG_RANCH;
-				clientState.buildingSize = 2;
-			}
+		
+		if (e.which == 84) {
+			// 'T'
+			// generate tower
+			// clientState.state = 'BUILDING';
+			// clientState.currentCommand = COMMAND.BUILD_TOWER;
+			// clientState.buildingSize = 2;
+			clientState.menuBar.tower.onclick();
 		}
 
-		if (e.which == 85) {
+		else if (e.which == 65) {
+			// 'A'
+			// generate farm
+			// clientState.state = 'BUILDING';
+			// clientState.currentCommand = COMMAND.BUILD_FARM;
+			// clientState.buildingSize = 1;
+			clientState.menuBar.farm.onclick();
+		}
+
+		else if (e.which == 70) {
+			// 'F'
+			// generate fence
+			// clientState.state = 'BUILDING';
+			// clientState.currentCommand = COMMAND.BUILD_FENCE;
+			// clientState.buildingSize = 1;
+			clientState.menuBar.fence.onclick();
+		}
+
+		else if (e.which == 82) {
+			// 'R'
+			// generate ranch
+			// clientState.state = 'BUILDING';
+			// clientState.currentCommand = COMMAND.BUILD_PIG_RANCH;
+			// clientState.buildingSize = 2;
+			clientState.menuBar.ranch.onclick();
+		}
+
+		else if (e.which == 67) {
+			// 'C'
+			// castle
+			clientState.menuBar.castle.onclick();
+		}
+
+		else if (e.which == 72) {
+			// 'H'
+			clientState.menuBar.pighq.onclick();
+		}
+
+		else if (e.which == 71) {
+			// 'G'
+			clientState.menuBar.garden.onclick();
+		}
+
+		else if (e.which == 87) {
+			// 'W'
+			clientState.menuBar.wall.onclick();
+		}
+
+		else if (e.which == 85) {
 			// 'U'
 			// upgrade state
-			clientState.state = 'UPGRADE';
+			// clientState.state = 'UPGRADE';
+			clientState.menuBar.upgrade.onclick();
 		}
 
-		else if (e.which == 81) {
+		else if (e.which == 68) {
 			// 'Q'
-			clientState.state = 'NONE';
+			clientState.menuBar.deselect.onclick();
 		}
 
 
@@ -472,10 +569,11 @@ function registerEventHandler() {
 	}
 	
 
-	function checkIfPointerLocked() {
-		return document.pointerLockElement === canvas ||
-		  document.mozPointerLockElement === canvas ||
-		  document.webkitPointerLockElement === canvas;
+	
+
+	return function removeAllGameEventListener() {
+		document.removeEventListener("mousedown", mouseDownCallback);
+		document.removeEventListener("keydown", keyDownHandler);
 	}
 }
 
@@ -516,32 +614,29 @@ function executeCommand(c) {
 		// params[0] row
 		// params[1] col
 		// params[2] team info
-		if (gameState.towerTier[params[2]] == 1) {
-			gameState.buildings.push(new Tower(params[0], params[1], params[2]));
-		} else {
-			gameState.buildings.push(new Castle(params[0], params[1], params[2]));
-		}
+		gameState.buildings.push(new Tower(params[0], params[1], params[2]));
 	}
 	else if (type == COMMAND.BUILD_FARM) {
-		if (gameState.ranchTier[params[2]] == 1) {
-			gameState.buildings.push(new Farm(params[0], params[1], params[2]));
-		} else {
-			gameState.buildings.push(new SuperFarm(params[0], params[1], params[2]));
-		}
+		gameState.buildings.push(new Farm(params[0], params[1], params[2]));
 	}
 	else if (type == COMMAND.BUILD_FENCE) {
-		if (gameState.towerTier[params[2]] == 1) {
-			gameState.buildings.push(new Fence(params[0], params[1], params[2]));
-		} else {
-			gameState.buildings.push(new SuperFence(params[0], params[1], params[2]));
-		}
+		gameState.buildings.push(new Fence(params[0], params[1], params[2]));
 	}
 	else if (type == COMMAND.BUILD_PIG_RANCH) {
-		if (gameState.ranchTier[params[2]] == 1) {
-			gameState.buildings.push(new PigRanch(params[0], params[1], params[2]));
-		} else {
-			gameState.buildings.push(new PigHQ(params[0], params[1], params[2]));
-		}
+		gameState.buildings.push(new PigRanch(params[0], params[1], params[2]));
+	}
+
+	else if (type == COMMAND.BUILD_CASTLE) {
+		gameState.buildings.push(new Castle(params[0], params[1], params[2]));
+	}
+	else if (type == COMMAND.BUILD_GARDEN) {
+		gameState.buildings.push(new Garden(params[0], params[1], params[2]));
+	}
+	else if (type == COMMAND.BUILD_WALL) {
+		gameState.buildings.push(new Wall(params[0], params[1], params[2]));
+	}
+	else if (type == COMMAND.BUILD_PIG_HQ) {
+		gameState.buildings.push(new PigHQ(params[0], params[1], params[2]));
 	}
 
 	else if (type == COMMAND.UPGRADE_PIG_RANCH) {
@@ -551,7 +646,8 @@ function executeCommand(c) {
 		// can only upgrade once
 		// params[0] is team info
 		if (gameState.ranchTier[params[0]] == 2) return;
-
+		if (gameState.coins[params[0]] < PRICES.UPGRADE_PIG_RANCH) return;
+		gameState.coins[params[0]] -= PRICES.UPGRADE_PIG_RANCH;
 		gameState.ranchTier[params[0]] = 2;
 
 	}
@@ -562,9 +658,35 @@ function executeCommand(c) {
 		// can only upgrade once
 		// params[0] is team info
 		if (gameState.towerTier[params[0]] == 2) return;
-
+		if (gameState.coins[params[0]] < PRICES.UPGRADE_TOWER) return;
+		gameState.coins[params[0]] -= PRICES.UPGRADE_TOWER;
 		gameState.towerTier[params[0]] = 2;
 
+	} 
+
+	else if (type == COMMAND.BUY) {
+		// params[0] : team info
+		// params[1] : command type (BUILD_...)
+		// params[2] : price to lock
+		// params[3] : building size
+		var team = params[0];
+		var buildCmd = params[1];
+		var price = params[2];
+		if (gameState.coins[team] >= price) {
+			gameState.coins[team] -= price;
+
+			if (isClientInTeam(team)){
+				clientState.currentCommand = buildCmd;
+				clientState.state = 'BUILDING';
+				clientState.buildingSize = params[3];
+			}
+		}
+	}
+
+	else if (type == COMMAND.DESELECT) {
+		// params[0] : team info
+		// params[1] : price to release
+		gameState.coins[params[0]] += params[1];
 	}
 }
 
@@ -576,4 +698,14 @@ function handleLocalCommand() {
 		}
 		executeCommand(localLog[i]);
 	}
+}
+
+
+
+function renderMenuBar() {
+	clientState.menuBar.render(clientState.g);
+}
+
+function isClientInTeam(team) {
+	return clientState.team == team;
 }

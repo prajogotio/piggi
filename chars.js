@@ -122,13 +122,24 @@ function Farm(row, col, team) {
 	this.PERSISTENCE = 300;
 	this.MAX_INTERACTION = 2;
 	this.radius = 0;
+
+	this.coinsToHarvest = 2;
+	this.lastProduce = 0;
+	this.PRODUCE_DELAY = 600;
 }
 
 Farm.prototype = Object.create(Building.prototype);
+Farm.prototype.update = function(flock, map) {
+	Building.prototype.update.call(this, flock, map);
+	if (this.updateCount-this.lastProduce <= this.PRODUCE_DELAY) {
+		return;
+	}
+	this.lastProduce = this.updateCount;
+	gameState.coins[clientState.team] += this.coinsToHarvest;
+}
 
 
-
-function SuperFarm(row, col, team) {
+function Garden(row, col, team) {
 	Building.call(this, 64, 128);
 
 	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/super_rice_field.png"], 0, 0, 128, 128, 6, 200));
@@ -145,9 +156,12 @@ function SuperFarm(row, col, team) {
 	this.PERSISTENCE = 300;
 	this.MAX_INTERACTION = 2;
 	this.radius = 0;
+
+	this.coinsToHarvest = 5;
+	this.PRODUCE_DELAY = 300;
 }
 
-SuperFarm.prototype = Object.create(Farm.prototype);
+Garden.prototype = Object.create(Farm.prototype);
 
 
 
@@ -175,7 +189,7 @@ Fence.prototype.canInteract = function(flock) {
 }
 
 
-function SuperFence(row, col, team) {
+function Wall(row, col, team) {
 	Building.call(this, 64, 100);
 	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/super_fence.png"], 0, 0, 128, 128, 1, 100));
 	this.setSprite(this.DEAD, new Sprite(asset.images["asset/fence_death.png"], 0, 0, 128, 128, 1, 100));
@@ -190,7 +204,7 @@ function SuperFence(row, col, team) {
 	this.MAX_INTERACTION = 2;
 }
 
-SuperFence.prototype = Object.create(Fence.prototype);
+Wall.prototype = Object.create(Fence.prototype);
 
 
 function PigRanch(row, col, team) {
@@ -211,6 +225,7 @@ function PigRanch(row, col, team) {
 	this.pigsPerProduction = 1;
 
 	this.product = Pig;
+	this.productPrice = 10;
 }
 
 PigRanch.prototype = Object.create(Building.prototype);
@@ -221,6 +236,8 @@ PigRanch.prototype.update = function(flock, map) {
 	if (this.updateCount - this.lastProduce <= this.PRODUCE_DELAY) {
 		return;
 	}
+	if (gameState.coins[clientState.team] < this.productPrice) return;
+	gameState.coins[clientState.team] -= this.productPrice;
 	this.lastProduce = this.updateCount;
 
 	var exitPoints = [[2, 0], [2, 1], 
@@ -259,6 +276,7 @@ function PigHQ(row, col, team) {
 	this.pigsPerProduction = 1;
 
 	this.product = Boar;
+	this.productPrice = 18;
 }
 
 PigHQ.prototype = Object.create(PigRanch.prototype);

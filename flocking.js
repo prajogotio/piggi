@@ -88,9 +88,9 @@ Flocker.prototype.integrate = function(map) {
 		this.orientation = getAngle(this.velocity);
 	}
 
-	if (this.target == null) {
-
-	} else if (this.target.minus(this.pos).length() < this.TARGET_RADIUS) {
+	if (this.target == null && this.targetStack.length == 0 && this.lockOnTarget == null) {
+		this.velocity = this.velocity.times(0.95);
+	} else if (this.target && this.target.minus(this.pos).length() < this.TARGET_RADIUS) {
 		//this.velocity = this.velocity.times(0.95);
 		this.target = this.targetStack.pop();
 	}
@@ -343,6 +343,7 @@ Flocker.prototype.handleLockOnTarget = function(flock, map) {
 
 
 Flocker.prototype.setLockOnTarget = function(obj, map) {
+	if (!obj.isAlive) return false;
 	if (obj == this.lockOnTarget) {
 		// if it is not moving target, and map has not changed
 		// continue with previous path
