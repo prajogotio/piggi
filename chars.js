@@ -3,11 +3,11 @@
 
 function Pig(pos, team) {
 	FlockPrite.call(this, 100, pos, 32);
-	this.setSprite(this.STANDBY, new Sprite(asset.images["asset/pig_standby.png"], 0, 0, 128, 128, 4, 20));
-	this.setSprite(this.MOVING, new Sprite(asset.images["asset/pig_running.png"], 0, 0, 128, 128, 6, 12));
-	this.setSprite(this.ATTACKING, new Sprite(asset.images["asset/pig_angry.png"], 0, 0, 128, 128, 3, 20));
-	this.setSprite(this.EATING, new Sprite(asset.images["asset/pig_eating.png"], 0, 0, 128, 128, 2, 30));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/pig_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.STANDBY, new Sprite(asset.images[addSuffix("asset/pig_standby.png", team)], 0, 0, 128, 128, 4, 20));
+	this.setSprite(this.MOVING, new Sprite(asset.images[addSuffix("asset/pig_running.png", team)], 0, 0, 128, 128, 6, 12));
+	this.setSprite(this.ATTACKING, new Sprite(asset.images[addSuffix("asset/pig_angry.png", team)], 0, 0, 128, 128, 3, 20));
+	this.setSprite(this.EATING, new Sprite(asset.images[addSuffix("asset/pig_eating.png", team)], 0, 0, 128, 128, 2, 30));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/pig_death.png", team)], 0, 0, 128, 128, 1, 100));
 	this.sprites[this.ATTACKING].autoReset = false;
 	this.team = team;
 	this.healthPoints = this.maxHealthPoints = 200;
@@ -31,11 +31,11 @@ Pig.prototype.update = function(flock, map) {
 
 function Boar(pos, team) {
 	FlockPrite.call(this, 100, pos, 32);
-	this.setSprite(this.STANDBY, new Sprite(asset.images["asset/boar_standby.png"], 0, 0, 128, 128, 2, 30));
-	this.setSprite(this.MOVING, new Sprite(asset.images["asset/boar_running.png"], 0, 0, 128, 128, 10, 12));
-	this.setSprite(this.ATTACKING, new Sprite(asset.images["asset/boar_attacking.png"], 0, 0, 128, 128, 3, 20));
-	this.setSprite(this.EATING, new Sprite(asset.images["asset/boar_eating.png"], 0, 0, 128, 128, 2, 30));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/boar_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.STANDBY, new Sprite(asset.images[addSuffix("asset/boar_standby.png", team)], 0, 0, 128, 128, 2, 30));
+	this.setSprite(this.MOVING, new Sprite(asset.images[addSuffix("asset/boar_running.png", team)], 0, 0, 128, 128, 10, 12));
+	this.setSprite(this.ATTACKING, new Sprite(asset.images[addSuffix("asset/boar_attacking.png", team)], 0, 0, 128, 128, 3, 20));
+	this.setSprite(this.EATING, new Sprite(asset.images[addSuffix("asset/boar_eating.png", team)], 0, 0, 128, 128, 2, 30));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/boar_death.png", team)], 0, 0, 128, 128, 1, 100));
 	this.sprites[this.ATTACKING].autoReset = false;
 	this.team = team;
 	this.healthPoints = this.maxHealthPoints = 800;
@@ -49,8 +49,8 @@ Boar.prototype = Object.create(Pig.prototype);
 
 function Tower(row, col, team) {
 	Building.call(this, 128, 640);
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/tower.png"], 0, 0, 128, 128, 2, 25));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/tower_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/tower.png",team)], 0, 0, 128, 128, 2, 25));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/tower_death.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
 	this.type = this.ATTACK_TYPE;
@@ -87,8 +87,8 @@ Tower.prototype.update = function(flock, map) {
 
 function Castle(row, col, team) {
 	Building.call(this, 128, 640);
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/castle.png"], 0, 0, 128, 128, 2, 25));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/castle_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/castle.png",team)], 0, 0, 128, 128, 2, 25));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/castle_death.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
 	this.type = this.ATTACK_TYPE;
@@ -108,8 +108,8 @@ Castle.prototype = Object.create(Tower.prototype);
 function Farm(row, col, team) {
 	Building.call(this, 64, 128);
 
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/rice_field.png"], 0, 0, 128, 128, 6, 200));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/rice_field_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/rice_field.png",team)], 0, 0, 128, 128, 6, 200));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/rice_field_death.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 	// farm is non blocking entity
 	gameState.map.data[row*gameState.map.width+col] = 1;
@@ -135,15 +135,15 @@ Farm.prototype.update = function(flock, map) {
 		return;
 	}
 	this.lastProduce = this.updateCount;
-	gameState.coins[clientState.team] += this.coinsToHarvest;
+	gameState.coins[this.team] += this.coinsToHarvest;
 }
 
 
 function Garden(row, col, team) {
 	Building.call(this, 64, 128);
 
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/super_rice_field.png"], 0, 0, 128, 128, 6, 200));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/rice_field_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/super_rice_field.png",team)], 0, 0, 128, 128, 6, 200));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/rice_field_death.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 	// farm is non blocking entity
 	gameState.map.data[row*gameState.map.width+col] = 1;
@@ -167,8 +167,8 @@ Garden.prototype = Object.create(Farm.prototype);
 
 function Fence(row, col, team) {
 	Building.call(this, 64, 100);
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/fence.png"], 0, 0, 128, 128, 1, 100));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/fence_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/fence.png",team)], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/fence_death.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
 	this.team = team;
@@ -191,8 +191,8 @@ Fence.prototype.canInteract = function(flock) {
 
 function Wall(row, col, team) {
 	Building.call(this, 64, 100);
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/super_fence.png"], 0, 0, 128, 128, 1, 100));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/fence_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/super_fence.png",team)], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/fence_death.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
 	this.team = team;
@@ -209,8 +209,8 @@ Wall.prototype = Object.create(Fence.prototype);
 
 function PigRanch(row, col, team) {
 	Building.call(this, 128, 300);
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/pig_ranch.png"], 0, 0, 128, 128, 2, 100));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/pig_ranch_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/pig_ranch.png",team)], 0, 0, 128, 128, 2, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/pig_ranch_death.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
 
@@ -236,8 +236,8 @@ PigRanch.prototype.update = function(flock, map) {
 	if (this.updateCount - this.lastProduce <= this.PRODUCE_DELAY) {
 		return;
 	}
-	if (gameState.coins[clientState.team] < this.productPrice) return;
-	gameState.coins[clientState.team] -= this.productPrice;
+	if (gameState.coins[this.team] < this.productPrice) return;
+	gameState.coins[this.team] -= this.productPrice;
 	this.lastProduce = this.updateCount;
 
 	var exitPoints = [[2, 0], [2, 1], 
@@ -261,8 +261,8 @@ PigRanch.prototype.update = function(flock, map) {
 
 function PigHQ(row, col, team) {
 	Building.call(this, 128, 300);
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/pig_hq.png"], 0, 0, 128, 128, 2, 100));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/pig_hq_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/pig_hq.png",team)], 0, 0, 128, 128, 2, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/pig_hq_death.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
 
@@ -283,8 +283,8 @@ PigHQ.prototype = Object.create(PigRanch.prototype);
 
 function Throne(row, col, team) {
 	Building.call(this, 128, 1000);
-	this.setSprite(this.NORMAL, new Sprite(asset.images["asset/throne.png"], 0, 0, 128, 128, 6, 40));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/throne.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.NORMAL, new Sprite(asset.images[addSuffix("asset/throne.png",team)], 0, 0, 128, 128, 6, 40));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/throne.png",team)], 0, 0, 128, 128, 1, 100));
 	registerBuildingToMap(this, gameState.map, row, col);
 
 	this.team = team;
@@ -301,8 +301,8 @@ Throne.prototype = Object.create(Building.prototype);
 
 function Arrow(owner, target, damage) {
 	FlockPrite.call(this, 0, owner.pos.copy(), 32);
-	this.setSprite(this.STANDBY, new Sprite(asset.images["asset/arrow.png"], 0, 0, 128, 128, 1, 100));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/arrow_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.STANDBY, new Sprite(asset.images[addSuffix("asset/arrow.png",owner.team)], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/arrow_death.png",owner.team)], 0, 0, 128, 128, 1, 100));
 	this.target = target;
 	this.owner = owner;
 	this.startPoint = owner.pos.copy();
@@ -340,8 +340,8 @@ Arrow.prototype.update = function() {
 
 function Javelin(owner, target, damage) {
 	FlockPrite.call(this, 0, owner.pos.copy(), 45);
-	this.setSprite(this.STANDBY, new Sprite(asset.images["asset/javelin.png"], 0, 0, 128, 128, 1, 100));
-	this.setSprite(this.DEAD, new Sprite(asset.images["asset/javelin_death.png"], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.STANDBY, new Sprite(asset.images[addSuffix("asset/javelin.png",team)], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/javelin_death.png",team)], 0, 0, 128, 128, 1, 100));
 	this.target = target;
 	this.owner = owner;
 	this.startPoint = owner.pos.copy();
@@ -386,6 +386,11 @@ function removeBuildingFromMap(building, map) {
 
 
 
-
+function addSuffix(name, team) {
+	if (team == 1) {
+		name += '/b';
+	}
+	return name;
+}
 
 

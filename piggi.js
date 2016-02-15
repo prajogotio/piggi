@@ -50,6 +50,7 @@ var asset = {
 		"asset/deselect_icon.png",
 		"asset/pig_coin.png",
 		"asset/numbers.png",
+		"asset/locked_icon.png",
 		"asset/grass01.jpg", 
 	],
 	images : {},
@@ -80,7 +81,7 @@ var PRICES = {
 	'BUILD_PIG_RANCH' : 30,
 	'BUILD_FENCE' : 1,
 	'UPGRADE_TOWER' : 600,
-	'UPGRADE_PIG_RANCH' : 600,
+	'UPGRADE_PIG_RANCH' : 800,
 	'BUILD_CASTLE' : 240,
 	'BUILD_GARDEN' : 35,
 	'BUILD_PIG_HQ' : 220,
@@ -125,7 +126,7 @@ function initializeAsset() {
 				bg.drawImage(asset.images[name], 0, 0, asset.images[name].width, asset.images[name].height, 0, 0, asset.images[name].width, asset.images[name].height);
 				bg.save();
 				bg.globalCompositeOperation = "source-atop";
-				bg.fillStyle = "rgba(0,0,255,0.2)";
+				bg.fillStyle = "rgba(255,190,72,0.25)";
 				bg.fillRect(0,0,b.width,b.height);
 				bg.restore();
 				asset.images[name+'/b'] = b;

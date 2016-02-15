@@ -113,6 +113,7 @@ function MenuIcon(asset, x, y, size) {
 	this.y = y;
 	this.width = size;
 	this.height = size;
+	this.isLocked = false;
 }
 
 MenuIcon.prototype.render = function(g) {
@@ -125,11 +126,15 @@ MenuIcon.prototype.render = function(g) {
 	g.translate(this.x-this.width/2,this.y-this.height/2);
 	g.fillRect(0,0,this.width,this.height);
 	this.sprite.render(g, this.width, this.height);
-
+	if (this.isLocked) {
+		g.drawImage(asset.images["asset/locked_icon.png"], 0, 0, 128, 128, 0, 0, this.width, this.height);
+	}
 	if (this.state == 'UNCLICKABLE' || this.state == 'LOCKED') {
 		g.fillStyle = "rgba(0,0,0,0.5)";
 		g.fillRect(0,0,this.width,this.height);
 	}
+
+
 
 	g.restore();
 }
@@ -200,7 +205,7 @@ function TowerIcon(x, y, size) {
 	PriceMenuIcon.call(this, asset.images["asset/tower_icon.png"], x, y, size, 'BUILD_TOWER');
 	this.buildingSize = 2;
 	this.tier = gameState.towerTier;
-	this.tierCommand = COMMAND.UPGRADE_TOWER;
+	this.tierCommand = 'UPGRADE_TOWER';
 }
 TowerIcon.prototype = Object.create(PriceMenuIcon.prototype);
 TowerIcon.prototype.update = function() {
@@ -219,10 +224,18 @@ TowerIcon.prototype.onclick = function() {
 		if (this.state == 'UNCLICKABLE') {
 			return;
 		}
-		issueCommand(this.tierCommand, [clientState.team]);
+		issueCommand(COMMAND[this.tierCommand], [clientState.team]);
 		clientState.menuBar.reset();
 	} else {
 		PriceMenuIcon.prototype.onclick.call(this);
+	}
+}
+TowerIcon.prototype.render = function(g) {
+	if (clientState.menuBar.upgrade.state == 'ACTIVE') {
+		MenuIcon.prototype.render.call(this, g);
+		PriceMenuIcon.prototype.renderPrice.call(this, g, PRICES[this.tierCommand]);
+	} else {
+		PriceMenuIcon.prototype.render.call(this, g);
 	}
 }
 
@@ -230,7 +243,7 @@ function RanchIcon(x, y, size) {
 	PriceMenuIcon.call(this, asset.images["asset/ranch_icon.png"], x, y, size, 'BUILD_PIG_RANCH');
 	this.buildingSize = 2;
 	this.tier = gameState.ranchTier;
-	this.tierCommand = COMMAND.UPGRADE_PIG_RANCH;
+	this.tierCommand = 'UPGRADE_PIG_RANCH';
 }
 RanchIcon.prototype = Object.create(PriceMenuIcon.prototype);
 RanchIcon.prototype.update = function() {
@@ -238,6 +251,9 @@ RanchIcon.prototype.update = function() {
 }
 RanchIcon.prototype.onclick = function() {
 	TowerIcon.prototype.onclick.call(this);
+}
+RanchIcon.prototype.render = function(g) {
+	TowerIcon.prototype.render.call(this, g);
 }
 
 
@@ -287,6 +303,7 @@ UpgradeIcon.prototype.update = function() {
 function CastleIcon(x, y, size) {
 	PriceMenuIcon.call(this, asset.images["asset/castle_icon.png"], x, y, size, 'BUILD_CASTLE');
 	this.buildingSize = 2;
+	this.isLocked = true;
 }
 CastleIcon.prototype = Object.create(PriceMenuIcon.prototype);
 CastleIcon.prototype.update = function() {
@@ -294,12 +311,14 @@ CastleIcon.prototype.update = function() {
 		this.state = 'UNCLICKABLE';
 		return;
 	}
+	this.isLocked = false;
 	PriceMenuIcon.prototype.update.call(this);
 }
 
 function PigHQIcon(x, y, size) {
 	PriceMenuIcon.call(this, asset.images["asset/pighq_icon.png"], x, y, size, 'BUILD_PIG_HQ');
 	this.buildingSize = 2;
+	this.isLocked = true;
 }
 PigHQIcon.prototype = Object.create(PriceMenuIcon.prototype);
 PigHQIcon.prototype.update = function() {
@@ -307,12 +326,14 @@ PigHQIcon.prototype.update = function() {
 		this.state = 'UNCLICKABLE';
 		return;
 	}
+	this.isLocked = false;
 	PriceMenuIcon.prototype.update.call(this);
 }
 
 function GardenIcon(x, y, size) {
 	PriceMenuIcon.call(this, asset.images["asset/garden_icon.png"], x, y, size, 'BUILD_GARDEN');
 	this.buildingSize = 1;
+	this.isLocked = true;
 }
 GardenIcon.prototype = Object.create(PriceMenuIcon.prototype);
 GardenIcon.prototype.update = function() {
@@ -320,12 +341,14 @@ GardenIcon.prototype.update = function() {
 		this.state = 'UNCLICKABLE';
 		return;
 	}
+	this.isLocked = false;
 	PriceMenuIcon.prototype.update.call(this);
 }
 
 function WallIcon(x, y, size) {
 	PriceMenuIcon.call(this, asset.images["asset/wall_icon.png"], x, y, size, 'BUILD_WALL');
 	this.buildingSize = 1;
+	this.isLocked = true;
 }
 WallIcon.prototype = Object.create(PriceMenuIcon.prototype);
 WallIcon.prototype.update = function() {
@@ -333,6 +356,7 @@ WallIcon.prototype.update = function() {
 		this.state = 'UNCLICKABLE';
 		return;
 	}
+	this.isLocked = false;
 	PriceMenuIcon.prototype.update.call(this);
 }
 
