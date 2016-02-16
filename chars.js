@@ -340,8 +340,8 @@ Arrow.prototype.update = function() {
 
 function Javelin(owner, target, damage) {
 	FlockPrite.call(this, 0, owner.pos.copy(), 45);
-	this.setSprite(this.STANDBY, new Sprite(asset.images[addSuffix("asset/javelin.png",team)], 0, 0, 128, 128, 1, 100));
-	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/javelin_death.png",team)], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.STANDBY, new Sprite(asset.images[addSuffix("asset/javelin.png",owner.team)], 0, 0, 128, 128, 1, 100));
+	this.setSprite(this.DEAD, new Sprite(asset.images[addSuffix("asset/javelin_death.png",owner.team)], 0, 0, 128, 128, 1, 100));
 	this.target = target;
 	this.owner = owner;
 	this.startPoint = owner.pos.copy();
